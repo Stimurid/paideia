@@ -1,0 +1,298 @@
+{% extends "base.html" %}
+{% block title %}Kairon — {{ target_id }}{% endblock %}
+{% block content %}
+
+<style>
+  .kr-card { background: white; border: 1px solid #e7e5e4; border-radius: 10px; padding: 14px; }
+  .kr-bar {
+    display: grid; grid-template-columns: 200px 1fr 50px; gap: 6px;
+    align-items: center; padding: 3px 0; font-size: 12px;
+  }
+  .kr-bar-track {
+    background: #f5f5f4; height: 6px; border-radius: 3px; overflow: hidden;
+  }
+  .kr-bar-fill {
+    height: 6px; background: linear-gradient(90deg, #7c3aed 0%, #4f46e5 100%);
+  }
+  .school-chip {
+    display: inline-block; padding: 3px 8px; margin: 2px;
+    border-radius: 999px; font-size: 11px;
+    border: 1px solid;
+  }
+  .rel-internal { background: #f0fdf4; border-color: #86efac; color: #166534; }
+  .rel-adjacent { background: #eff6ff; border-color: #93c5fd; color: #1e40af; }
+  .rel-borrowed { background: #fff7ed; border-color: #fdba74; color: #c2410c; }
+  .rel-contrastive { background: #fef2f2; border-color: #fca5a5; color: #b91c1c; }
+  .rel-decorative { background: #fafaf9; border-color: #d6d3d1; color: #78716c; }
+  .rel-absent_but_relevant { background: #fefce8; border-color: #fde047; color: #854d0e; }
+</style>
+
+<div class="mb-3 flex items-baseline gap-2 flex-wrap text-sm">
+  <a href="/{{ 'projects' if target_kind == 'project' else 'courses' }}" class="text-stone-500 hover:text-stone-900">{{ 'проекты' if target_kind == 'project' else 'курсы' }}</a>
+  <span class="text-stone-300">/</span>
+  <a href="/{{ target_kind }}/{{ target_id }}" class="text-stone-500 hover:text-stone-900">{{ target_id }}</a>
+  <span class="text-stone-300">/</span>
+  <h1 class="text-lg font-bold">📐 Kairon — публикационная модель</h1>
+</div>
+
+<p class="text-stone-600 text-sm mb-4">
+  Третий слой Paideia: проект/курс как академический ход в координатном пространстве дисциплин и школ.
+  Pathway-matrix покажет в каком академическом сообществе тебя признают своим, какие мосты построить, что нельзя ломать ради публикации.
+  Основано на <em>Kairoskopion Publication Integrability Model</em>.
+</p>
+
+<form method="post" action="/api/kairon/{{ target_kind }}/{{ target_id }}/analyze" class="mb-4 flex gap-2 items-center text-sm">
+  <select name="model_role" class="border border-stone-300 rounded px-2 py-1 text-xs">
+    <option value="deep">🧠 deep · gpt-5 · ≈$0.05 · 30-60 с</option>
+    <option value="fast">🚀 fast · gpt-4.1-mini · ≈$0.005 · 5-10 с</option>
+  </select>
+  <button type="submit" class="bg-violet-700 text-white px-4 py-1.5 rounded font-semibold hover:bg-violet-600 text-sm">
+    {% if latest %}🔄 пересобрать{% else %}📐 построить публикационную модель{% endif %}
+  </button>
+  {% if history %}<span class="text-xs text-stone-500 ml-2">прогонов: {{ history | length }}</span>{% endif %}
+</form>
+
+{% if not latest %}
+  <div class="bg-stone-50 border border-stone-200 rounded p-8 text-center text-stone-500 text-sm">
+    Модель ещё не построена. Нажми кнопку выше — LLM (deep) проанализирует проект как академический ход.
+  </div>
+{% else %}
+  {% set am = latest.article_model %}
+  <div class="text-xs text-stone-500 mb-3">
+    последний прогон {{ latest.created_at[:16] }} · {{ (latest.duration_ms / 1000) | round(1) }} с · {{ latest.model_used }}
+  </div>
+
+  <!-- VERDICT -->
+  {% if am.verdict %}
+    <div class="kr-card mb-4 border-l-4 border-violet-500">
+      <div class="text-xs uppercase text-stone-500 mb-2">verdict</div>
+      <p class="text-sm font-semibold mb-2">{{ am.verdict.summary }}</p>
+      {% if am.verdict.primary_pathway_recommendation %}
+        <div class="text-xs">🎯 рекомендованный pathway: <strong>{{ am.verdict.primary_pathway_recommendation }}</strong></div>
+      {% endif %}
+      {% if am.verdict.main_publication_risk %}
+        <div class="text-xs text-rose-700">⚠ главный риск: {{ am.verdict.main_publication_risk }}</div>
+      {% endif %}
+      {% if am.verdict.next_action %}
+        <div class="text-xs text-emerald-700 mt-1">→ {{ am.verdict.next_action }}</div>
+      {% endif %}
+    </div>
+  {% endif %}
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+    <!-- IDENTITY -->
+    {% if am.identity %}
+      <div class="kr-card">
+        <div class="text-xs uppercase text-stone-500 mb-2">identity</div>
+        <div class="text-sm">
+          <div><strong>{{ am.identity.title }}</strong></div>
+          <div class="text-xs text-stone-500">stage: {{ am.identity.stage }} · type: {{ am.identity.type }}</div>
+          {% if am.identity.primary_object %}<div class="text-xs mt-1 italic">{{ am.identity.primary_object }}</div>{% endif %}
+        </div>
+      </div>
+    {% endif %}
+
+    <!-- NOVELTY -->
+    {% if am.novelty_mode %}
+      <div class="kr-card">
+        <div class="text-xs uppercase text-stone-500 mb-2">novelty</div>
+        <div class="text-sm">
+          <strong>{{ am.novelty_mode.mode }}</strong>
+          {% if am.novelty_mode.claim_strength %}<span class="text-xs text-amber-600 ml-2">сила: {{ am.novelty_mode.claim_strength }}</span>{% endif %}
+        </div>
+        {% if am.novelty_mode.builds_on_or_opposes %}
+          <div class="text-xs text-stone-600 mt-1">{{ am.novelty_mode.builds_on_or_opposes }}</div>
+        {% endif %}
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- DISCIPLINE VECTOR -->
+  {% if am.discipline_vector %}
+    <div class="kr-card mb-4">
+      <div class="text-xs uppercase text-stone-500 mb-3">📚 discipline vector</div>
+      {% for k, v in am.discipline_vector.items() %}
+        {% if v and v > 0 %}
+          <div class="kr-bar">
+            <span class="text-stone-700">{{ k.replace('_', ' ') }}</span>
+            <div class="kr-bar-track"><div class="kr-bar-fill" style="width: {{ (v * 100) | round }}%"></div></div>
+            <span class="text-right tabular-nums">{{ "%.2f" % v }}</span>
+          </div>
+        {% endif %}
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <!-- ARGUMENT MOVE -->
+  {% if am.argument_move_vector %}
+    <div class="kr-card mb-4">
+      <div class="text-xs uppercase text-stone-500 mb-3">🎯 argument move</div>
+      {% for k, v in am.argument_move_vector.items() %}
+        {% if v and v > 0 %}
+          <div class="kr-bar">
+            <span class="text-stone-700">{{ k.replace('_', ' ') }}</span>
+            <div class="kr-bar-track"><div class="kr-bar-fill" style="width: {{ (v * 100) | round }}%"></div></div>
+            <span class="text-right tabular-nums">{{ "%.2f" % v }}</span>
+          </div>
+        {% endif %}
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <!-- SCHOOLS -->
+  {% if am.school_affiliation_vector %}
+    <div class="kr-card mb-4">
+      <div class="text-xs uppercase text-stone-500 mb-2">🏛 школы и традиции</div>
+      <div>
+        {% for school, data in am.school_affiliation_vector.items() %}
+          {% if data is mapping and data.strength and data.strength != 0 %}
+            <span class="school-chip rel-{{ data.relation or 'decorative' }}" title="{{ data.relation }}, strength {{ data.strength }}">
+              {{ school }}
+              <span class="opacity-60">· {{ data.relation[:3] }} · {{ "%.2f" % data.strength }}</span>
+            </span>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
+
+  <!-- PROTECTED CORE -->
+  {% if am.protected_core %}
+    <div class="kr-card mb-4 border-l-4 border-rose-500">
+      <div class="text-xs uppercase text-rose-700 font-bold mb-2">🛡 protected core (что нельзя ломать)</div>
+      <ul class="text-sm space-y-2">
+        {% for p in am.protected_core %}
+          <li>
+            <strong>{{ p.item }}</strong>
+            {% if p.why %}<div class="text-xs text-stone-600 italic">{{ p.why }}</div>{% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+
+  {% if am.mutable_zones %}
+    <div class="kr-card mb-4">
+      <div class="text-xs uppercase text-stone-500 mb-2">🔧 mutable zones</div>
+      <ul class="text-sm list-disc ml-5">
+        {% for z in am.mutable_zones %}<li>{{ z }}</li>{% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+
+  <!-- PATHWAY MATRIX -->
+  {% if am.pathway_matrix %}
+    <div class="kr-card mb-4">
+      <div class="text-xs uppercase text-stone-500 mb-3">🛤 pathway matrix</div>
+      <div class="space-y-3">
+        {% for p in am.pathway_matrix %}
+          {% set fit_cls = {
+            'strong': 'border-emerald-500 bg-emerald-50',
+            'medium_strong': 'border-blue-500 bg-blue-50',
+            'medium': 'border-amber-400 bg-amber-50',
+            'weak_medium': 'border-orange-400 bg-orange-50',
+            'weak': 'border-rose-400 bg-rose-50',
+          }.get(p.fit_strength, 'border-stone-300 bg-stone-50') %}
+          <div class="border-l-4 {{ fit_cls }} pl-3 py-2 rounded-r">
+            <div class="flex items-baseline gap-2 mb-1 flex-wrap">
+              <strong class="text-sm">{{ p.pathway }}</strong>
+              <span class="pill bg-white text-stone-700 text-xs">{{ p.fit_strength }}</span>
+              {% if p.core_risk %}
+                <span class="pill {% if p.core_risk == 'high' %}bg-rose-100 text-rose-700{% elif p.core_risk == 'medium' %}bg-amber-100 text-amber-700{% else %}bg-stone-100 text-stone-600{% endif %} text-xs">риск: {{ p.core_risk }}</span>
+              {% endif %}
+              {% if p.citation_effort %}
+                <span class="text-xs text-stone-500">цитат-работа: {{ p.citation_effort }}</span>
+              {% endif %}
+            </div>
+            {% if p.likely_article_identity %}
+              <div class="text-xs italic text-stone-700 mb-1">→ {{ p.likely_article_identity }}</div>
+            {% endif %}
+            {% if p.required_adaptations %}
+              <div class="text-xs"><strong>что переделать:</strong>
+                <ul class="list-disc ml-5">
+                  {% for a in p.required_adaptations %}<li>{{ a }}</li>{% endfor %}
+                </ul>
+              </div>
+            {% endif %}
+            {% if p.venue_archetypes %}
+              <div class="text-xs text-stone-500 mt-1">примеры venue: {{ p.venue_archetypes | join(', ') }}</div>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
+
+  <!-- CITATION NETWORK -->
+  {% if am.citation_network_signature %}
+    <div class="kr-card mb-4">
+      <div class="text-xs uppercase text-stone-500 mb-2">🔗 citation network</div>
+      {% if am.citation_network_signature.must_cite_for_current_core %}
+        <div class="text-xs mb-1"><strong>must cite:</strong> {{ am.citation_network_signature.must_cite_for_current_core | join(', ') }}</div>
+      {% endif %}
+      {% if am.citation_network_signature.currently_cited %}
+        <div class="text-xs mb-1"><strong>уже цитируешь:</strong> {{ am.citation_network_signature.currently_cited | join(', ') }}</div>
+      {% endif %}
+      {% if am.citation_network_signature.foil_or_contrastive %}
+        <div class="text-xs mb-1 text-rose-700"><strong>foil:</strong> {{ am.citation_network_signature.foil_or_contrastive | join(', ') }}</div>
+      {% endif %}
+      {% if am.citation_network_signature.conspicuous_absence_by_pathway %}
+        <div class="text-xs mt-2"><strong>тревожные отсутствия по pathway:</strong></div>
+        <ul class="text-xs ml-5">
+          {% for pw, names in am.citation_network_signature.conspicuous_absence_by_pathway.items() %}
+            {% if names %}
+              <li><span class="text-stone-500">{{ pw }}:</span> {{ names | join(', ') }}</li>
+            {% endif %}
+          {% endfor %}
+        </ul>
+      {% endif %}
+    </div>
+  {% endif %}
+
+  <!-- RISKS + OPPORTUNITIES -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+    {% if am.publication_risks %}
+      <div class="kr-card border-l-4 border-rose-400">
+        <div class="text-xs uppercase text-rose-700 mb-2">⚠ риски</div>
+        <ul class="text-xs space-y-2">
+          {% for r in am.publication_risks %}
+            <li>
+              <strong>{{ r.risk }}</strong>
+              <span class="pill bg-rose-100 text-rose-700 text-xs ml-2">{{ r.severity }}</span>
+              {% if r.evidence %}<div class="text-stone-600 italic">{{ r.evidence }}</div>{% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+    {% if am.publication_opportunities %}
+      <div class="kr-card border-l-4 border-emerald-400">
+        <div class="text-xs uppercase text-emerald-700 mb-2">✨ возможности</div>
+        <ul class="text-xs space-y-2">
+          {% for o in am.publication_opportunities %}
+            <li>
+              <strong>{{ o.opportunity }}</strong>
+              {% if o.why %}<div class="text-stone-600 italic">{{ o.why }}</div>{% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+  </div>
+
+  {% if am.unknowns %}
+    <div class="kr-card mb-4">
+      <div class="text-xs uppercase text-stone-500 mb-2">❓ unknowns (не выдумано — просто не верифицировано)</div>
+      <ul class="text-xs list-disc ml-5">
+        {% for u in am.unknowns %}<li>{{ u }}</li>{% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+
+  <details class="mt-4">
+    <summary class="cursor-pointer text-xs text-stone-500">raw JSON</summary>
+    <pre class="bg-stone-50 border border-stone-200 rounded p-3 text-xs overflow-x-auto mt-2">{{ am | tojson(indent=2) }}</pre>
+  </details>
+{% endif %}
+
+{% endblock %}

@@ -692,6 +692,44 @@ CREATE TABLE IF NOT EXISTS feedback_messages (
 );
 CREATE INDEX IF NOT EXISTS idx_feedback_messages ON feedback_messages(thread_id, id);
 
+-- BYOK: свой LLM-ключ пользователя + опц. шаринг с дневным лимитом.
+CREATE TABLE IF NOT EXISTS user_keys (
+    session_id      TEXT PRIMARY KEY,
+    api_key         TEXT NOT NULL,
+    base_url        TEXT NOT NULL DEFAULT 'https://api.302.ai/v1',
+    fast_model      TEXT,
+    deep_model      TEXT,
+    search_model    TEXT,
+    embed_model     TEXT,
+    nickname        TEXT,                              -- для отображения если шарит
+    daily_limit_usd REAL NOT NULL DEFAULT 0,           -- 0 = нет лимита; иначе глобальный потолок
+    shared          INTEGER NOT NULL DEFAULT 0,        -- 1 = разрешает другим пользоваться
+    share_daily_usd REAL NOT NULL DEFAULT 0,           -- сколько отдаёт в общую кассу шаринга в день
+    created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_user_keys_shared ON user_keys(shared);
+
+-- Корпус-кандидаты из курсов: предложения от litops/student/reflection стать
+-- частью корпуса/теории.
+CREATE TABLE IF NOT EXISTS corpus_candidates (
+    id              TEXT PRIMARY KEY,
+    kind            TEXT NOT NULL,                     -- hypothesis_candidate / counter_signal_candidate / case_candidate / scenario_candidate
+    title           TEXT NOT NULL,
+    body_md         TEXT,
+    source_event_id TEXT,                              -- из какого события курса
+    source_course_id TEXT,
+    source_type     TEXT,                              -- litops_model / student_question / reflection / discuss
+    source_confidence INTEGER,                         -- 1-5 из источника
+    rationale       TEXT,                              -- почему это кандидат
+    status          TEXT NOT NULL DEFAULT 'pending',   -- pending / accepted / rejected / edited
+    created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+    decided_at      TEXT,
+    decided_by      TEXT                               -- session_id
+);
+CREATE INDEX IF NOT EXISTS idx_corpus_cand_status ON corpus_candidates(status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_corpus_cand_source ON corpus_candidates(source_event_id);
+
 -- Discuss-агент: дискуссия с агентом по проекту / курсу с QMO-слайдерами.
 CREATE TABLE IF NOT EXISTS discuss_sessions (
     id              TEXT PRIMARY KEY,

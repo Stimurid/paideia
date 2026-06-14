@@ -2540,6 +2540,160 @@ def onboarding_page(request: Request) -> Any:
     )
 
 
+# --- Kairon: публикационная модель проекта/курса ---
+
+
+@app.get("/kairon/{target_kind}/{target_id}", response_class=HTMLResponse)
+def kairon_page(request: Request, target_kind: str, target_id: str) -> Any:
+    if target_kind not in ("project", "course"):
+        raise HTTPException(404)
+    from . import kairon
+    latest = kairon.latest(target_kind, target_id)
+    history = kairon.list_for_target(target_kind, target_id)
+    return templates.TemplateResponse(
+        request, "kairon.html",
+        {"target_kind": target_kind, "target_id": target_id,
+         "latest": latest, "history": history},
+    )
+
+
+@app.post("/api/kairon/{target_kind}/{target_id}/analyze")
+def api_kairon_analyze(request: Request, target_kind: str, target_id: str,
+                       model_role: str = Form("deep")) -> Any:
+    if target_kind not in ("project", "course"):
+        raise HTTPException(404)
+    sid = request.cookies.get(session_mod.COOKIE_NAME)
+    ip = request.client.host if request.client else None
+    rl = session_mod.check_rate_limit(sid, ip, model_role)
+    if not rl["allowed"]:
+        raise HTTPException(429, "Лимит исчерпан.")
+    from . import kairon
+    try:
+        result = kairon.analyze(target_kind, target_id, model_role=model_role)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+    except Exception as exc:
+        raise HTTPException(500, f"kairon failed: {exc}")
+    return RedirectResponse(url=f"/kairon/{target_kind}/{target_id}", status_code=303)
+
+
+# --- Код-логин для тестеров ---
+
+
+@app.get("/login", response_class=HTMLResponse)
+def login_page(request: Request) -> Any:
+    from . import auth_codes as ac
+    sid = request.cookies.get(session_mod.COOKIE_NAME)
+    identity = ac.get_identity(sid)
+    return templates.TemplateResponse(
+        request, "login.html",
+        {"identity": identity, "msg": request.query_params.get("msg", "")},
+    )
+
+
+@app.post("/api/login/redeem")
+def api_login_redeem(request: Request, code: str = Form(...)) -> Any:
+    from . import auth_codes as ac
+    sid = request.cookies.get(session_mod.COOKIE_NAME)
+    if not sid:
+        raise HTTPException(400, "no session")
+    result = ac.redeem(code, sid)
+    if not result["ok"]:
+        return RedirectResponse(url=f"/login?msg={result['msg']}", status_code=303)
+    return RedirectResponse(url=f"/login?msg=✓ привет, {result['nickname']}", status_code=303)
+
+
+@app.get("/service/codes", response_class=HTMLResponse)
+def service_codes(request: Request) -> Any:
+    """Только владелец (admin/owner) видит коды и создаёт их."""
+    from . import auth_codes as ac
+    sid = request.cookies.get(session_mod.COOKIE_NAME)
+    identity = ac.get_identity(sid)
+    if not identity.get("is_owner"):
+        return templates.TemplateResponse(
+            request, "login.html",
+            {"identity": identity, "msg": "Эта страница только для admin/owner",
+             "want_owner": True},
+        )
+    codes = ac.list_codes()
+    return templates.TemplateResponse(
+        request, "codes.html",
+        {"codes": codes, "identity": identity},
+    )
+
+
+@app.post("/api/service/codes/generate")
+def api_generate_code(
+    request: Request,
+    nickname: str = Form(...), role: str = Form("tester"),
+    ttl_days: int = Form(90), note: str = Form(""),
+) -> Any:
+    from . import auth_codes as ac
+    sid = request.cookies.get(session_mod.COOKIE_NAME)
+    identity = ac.get_identity(sid)
+    if not identity.get("is_owner"):
+        raise HTTPException(403, "Только owner может выдавать коды")
+    code = ac.generate_code(nickname=nickname, role=role,
+                             created_by=identity.get("nickname"),
+                             ttl_days=ttl_days, note=note)
+    return RedirectResponse(url=f"/service/codes?new={code}", status_code=303)
+
+
+# --- BYOK: свой LLM-ключ ---
+
+
+@app.get("/settings", response_class=HTMLResponse)
+def settings_page(request: Request) -> Any:
+    from . import byok
+    sid = request.cookies.get(session_mod.COOKIE_NAME)
+    key = byok.get_key(sid) if sid else None
+    if key:
+        # маскируем ключ для UI
+        k = key["api_key"]
+        key["api_key_masked"] = k[:8] + "..." + k[-4:] if len(k) > 12 else "***"
+        key["budget"] = byok.check_personal_budget(sid)
+    shared = byok.list_shared()
+    return templates.TemplateResponse(
+        request, "settings.html",
+        {"key": key, "shared_keys": shared},
+    )
+
+
+@app.post("/api/settings/save-key")
+def api_settings_save_key(
+    request: Request,
+    api_key: str = Form(...), base_url: str = Form(""),
+    nickname: str = Form(""), daily_limit_usd: float = Form(0),
+    shared: str = Form(""), share_daily_usd: float = Form(0),
+    fast_model: str = Form(""), deep_model: str = Form(""),
+    search_model: str = Form(""),
+) -> Any:
+    from . import byok
+    sid = request.cookies.get(session_mod.COOKIE_NAME)
+    if not sid:
+        raise HTTPException(400, "no session")
+    byok.save_key(
+        session_id=sid, api_key=api_key, base_url=base_url,
+        nickname=nickname, daily_limit_usd=daily_limit_usd,
+        shared=bool(shared), share_daily_usd=share_daily_usd,
+        fast_model=fast_model, deep_model=deep_model, search_model=search_model,
+    )
+    from .llm import invalidate_llm_cache
+    invalidate_llm_cache(sid)
+    return RedirectResponse(url="/settings?saved=1", status_code=303)
+
+
+@app.post("/api/settings/delete-key")
+def api_settings_delete_key(request: Request) -> Any:
+    from . import byok
+    sid = request.cookies.get(session_mod.COOKIE_NAME)
+    if sid:
+        byok.delete_key(sid)
+        from .llm import invalidate_llm_cache
+        invalidate_llm_cache(sid)
+    return RedirectResponse(url="/settings?deleted=1", status_code=303)
+
+
 @app.get("/quickstart", response_class=HTMLResponse)
 def quickstart_page(request: Request) -> Any:
     current_role = request.cookies.get(session_mod.ROLE_COOKIE)
@@ -2948,7 +3102,13 @@ def api_event_add_artifact(
 
 
 @app.post("/api/course/event/artifact/{artifact_id}/delete")
-def api_artifact_delete(artifact_id: str) -> Any:
+def api_artifact_delete(artifact_id: str, request: Request) -> Any:
+    # destructive: только owner может удалять
+    from . import auth_codes as ac
+    sid = request.cookies.get(session_mod.COOKIE_NAME)
+    identity = ac.get_identity(sid)
+    if not identity.get("is_owner"):
+        raise HTTPException(403, "Только owner может удалять артефакты. Войди по коду owner-роли.")
     from . import course_packs as cp
     conn = open_db()
     try:
@@ -3050,6 +3210,53 @@ def course_members_page(request: Request, course_id: str) -> Any:
          "by_nick": by_nick,
          "total_artifacts": len(student_arts)},
     )
+
+
+# --- Корпус-конвейер ---
+
+
+@app.get("/service/corpus-candidates", response_class=HTMLResponse)
+def service_corpus_candidates(request: Request, status: str = "pending",
+                               kind: str | None = None) -> Any:
+    from . import corpus_conveyor as cc
+    return templates.TemplateResponse(
+        request, "corpus_candidates.html",
+        {"candidates": cc.list_candidates(status=status, kind=kind),
+         "stats": cc.stats(),
+         "filter_status": status, "filter_kind": kind or ""},
+    )
+
+
+@app.post("/api/corpus-candidates/{cid}/decide")
+def api_candidate_decide(cid: str, request: Request,
+                          decision: str = Form(...)) -> Any:
+    from . import corpus_conveyor as cc
+    sid = request.cookies.get(session_mod.COOKIE_NAME)
+    try:
+        cc.decide(cid, decision, decided_by=sid)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+    return RedirectResponse(url="/service/corpus-candidates", status_code=303)
+
+
+@app.post("/api/course/event/{event_id}/harvest")
+def api_event_harvest(event_id: str) -> Any:
+    """Извлечь кандидатов в корпус из событий курса."""
+    from . import corpus_conveyor as cc
+    conn = open_db()
+    try:
+        row = conn.execute("SELECT course_id FROM course_events WHERE id = ?",
+                            (event_id,)).fetchone()
+    finally:
+        conn.close()
+    try:
+        result = cc.harvest_from_event(event_id)
+    except Exception as exc:
+        raise HTTPException(500, f"harvest failed: {exc}")
+    if not row:
+        return JSONResponse(result)
+    return RedirectResponse(
+        url=f"/course/{row['course_id']}/event/{event_id}", status_code=303)
 
 
 @app.post("/api/course/event/{event_id}/extract-litops")

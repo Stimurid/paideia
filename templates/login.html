@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Войти — Paideia{% endblock %}
+{% block content %}
+
+<div class="max-w-md mx-auto">
+  <h1 class="text-2xl font-bold mb-2">🔑 Вход по коду</h1>
+  <p class="text-stone-600 text-sm mb-6">
+    Тимур выдаёт тебе код вида <code>P-XXXXXXXX</code>. Это привязывает сессию к нику,
+    снимает дневные лимиты и (если код был с ролью owner/admin) даёт доступ к сервисным страницам.
+  </p>
+
+  {% if msg %}
+    <div class="bg-{% if '✓' in msg %}emerald{% else %}amber{% endif %}-50 border border-{% if '✓' in msg %}emerald{% else %}amber{% endif %}-300 rounded p-3 mb-4 text-sm">
+      {{ msg }}
+    </div>
+  {% endif %}
+
+  {% if identity.nickname %}
+    <div class="bg-violet-50 border border-violet-200 rounded p-4 mb-6">
+      <div class="text-xs uppercase text-stone-500 mb-1">текущая идентичность</div>
+      <div class="text-lg font-bold">{{ identity.nickname }}</div>
+      <div class="text-xs text-stone-500">роль: {{ identity.role }}{% if identity.is_owner %} · 🛡 owner{% endif %}{% if identity.is_supporter %} · 💛 supporter{% endif %}</div>
+    </div>
+  {% endif %}
+
+  <form method="post" action="/api/login/redeem" class="bg-white border border-stone-200 rounded-lg p-5 space-y-3">
+    <label class="block text-xs uppercase text-stone-500 font-bold">код</label>
+    <input name="code" required placeholder="P-XXXXXXXX"
+           class="border border-stone-300 rounded px-3 py-2 w-full font-mono uppercase"
+           autocapitalize="characters" autocomplete="off">
+    <button class="bg-violet-700 text-white px-5 py-2 rounded font-semibold hover:bg-violet-600 w-full">
+      войти
+    </button>
+  </form>
+
+  {% if want_owner %}
+    <div class="bg-amber-50 border border-amber-200 rounded p-3 mt-4 text-xs">
+      Эта страница требует owner-роли. Получи код с role=owner и войди.
+    </div>
+  {% endif %}
+
+  <div class="mt-6 text-xs text-stone-500">
+    Кода нет? Напиши Тимуру в Telegram. Или зайди как анонимный гость — корпус и теория видны без логина.
+  </div>
+</div>
+
+{% endblock %}

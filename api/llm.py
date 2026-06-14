@@ -85,10 +85,23 @@ class LlmClient:
     def __init__(self, settings: Settings | None = None, timeout_seconds: float = 180.0) -> None:
         s = settings or get_settings()
         self.timeout_seconds = timeout_seconds
+        # BYOK: подменяем primary если у текущей сессии есть свой ключ
+        api_key = s.llm_primary_api_key
+        base_url = s.llm_primary_base_url
+        try:
+            from . import session as session_mod, byok as byok_mod
+            sid = session_mod.current_session.get()
+            if sid:
+                personal_key, personal_url, _overrides = byok_mod.llm_credentials_for(sid)
+                if personal_key and personal_key != s.llm_primary_api_key:
+                    api_key = personal_key
+                    base_url = personal_url or s.llm_primary_base_url
+        except Exception:
+            pass
         self.primary = ProviderConfig(
             name="302.ai",
-            base_url=s.llm_primary_base_url,
-            api_key=s.llm_primary_api_key,
+            base_url=base_url,
+            api_key=api_key,
             model=s.llm_primary_model,
             embed_model=s.llm_primary_embed_model,
         )
@@ -339,11 +352,25 @@ class LlmClient:
         return result
 
 
-_client: LlmClient | None = None
+_clients: dict[str, LlmClient] = {}
 
 
 def get_llm() -> LlmClient:
-    global _client
-    if _client is None:
-        _client = LlmClient()
-    return _client
+    """Session-aware кеш: для каждой сессии свой LlmClient (BYOK).
+    Без сессии — общий платформенный."""
+    try:
+        from . import session as session_mod
+        sid = session_mod.current_session.get() or "_platform"
+    except Exception:
+        sid = "_platform"
+    if sid not in _clients:
+        _clients[sid] = LlmClient()
+    return _clients[sid]
+
+
+def invalidate_llm_cache(session_id: str | None = None) -> None:
+    """Сброс кеша — нужен когда юзер поменял свой ключ."""
+    if session_id and session_id in _clients:
+        del _clients[session_id]
+    elif session_id is None:
+        _clients.clear()

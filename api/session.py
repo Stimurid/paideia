@@ -21,11 +21,11 @@ current_ip: contextvars.ContextVar[str | None] = contextvars.ContextVar(
     "current_ip", default=None
 )
 
-# Лимиты по умолчанию (F11). Можно переопределить env-переменными.
+# Лимиты по умолчанию (F11). Жёстко после ~20 тестеров на 1 ключе.
 DAILY_LIMITS = {
-    "fast":   30,
-    "deep":    5,
-    "search":  3,
+    "fast":   10,
+    "deep":    2,
+    "search":  1,
 }
 GLOBAL_DAILY_BUDGET_USD = 1.0  # глобальный потолок на всю платформу за сутки
 
@@ -184,11 +184,31 @@ def check_rate_limit(session_id: str | None, client_ip: str | None,
                      model_role: str) -> dict[str, Any]:
     """Проверить дневной лимит. Возвращает dict с remaining/limit/allowed/reason.
 
-    Supporter обходит все лимиты. Глобальный budget cap проверяется тоже.
+    Supporter обходит все лимиты. Свой ключ (BYOK) — тоже обходит платформенные лимиты
+    (но проверяется personal_budget). Глобальный budget cap проверяется тоже.
     """
     if is_supporter(session_id):
         return {"allowed": True, "limit": None, "remaining": None,
                 "is_supporter": True, "reason": "supporter"}
+
+    # BYOK: свой ключ → платформенные лимиты не применяем, только personal_budget
+    try:
+        from . import byok as byok_mod
+        pb = byok_mod.check_personal_budget(session_id)
+        if pb.get("has_key"):
+            if pb.get("blocked"):
+                return {"allowed": False, "limit": pb.get("limit_usd"),
+                        "remaining": 0, "is_supporter": False,
+                        "has_personal_key": True,
+                        "reason": "personal_budget_exhausted",
+                        "spent_usd": pb.get("spent_usd")}
+            return {"allowed": True, "limit": None, "remaining": None,
+                    "is_supporter": False, "has_personal_key": True,
+                    "spent_usd": pb.get("spent_usd"),
+                    "personal_limit_usd": pb.get("limit_usd"),
+                    "reason": "byok"}
+    except Exception:
+        pass
 
     limit = DAILY_LIMITS.get(model_role, DAILY_LIMITS["fast"])
     conn = open_db()

@@ -28,5 +28,8 @@ python-pptx==1.0.2
 EbookLib==0.18
 beautifulsoup4==4.12.3
 
+# Migrations
+alembic==1.13.3
+
 # Tests
 pytest==8.3.3
