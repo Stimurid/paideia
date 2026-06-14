@@ -250,6 +250,27 @@
   </script>
 {% endif %}
 
+<!-- Загрузка аудио: транскрипт + автозапуск litops -->
+<details class="bg-white border border-stone-200 rounded p-3 mb-4">
+  <summary class="cursor-pointer font-semibold text-sm">🎙 Загрузить аудио (mp3/wav/m4a) → автотранскрипт + litops</summary>
+  <form method="post" action="/api/course/event/{{ event.id }}/transcribe-upload"
+        enctype="multipart/form-data" class="mt-2 space-y-2 text-sm">
+    <input type="file" name="file" required accept="audio/*,.mp3,.wav,.m4a,.ogg,.webm"
+           class="text-sm border border-stone-300 rounded px-3 py-2 w-full">
+    <select name="language" class="border border-stone-300 rounded px-2 py-1 text-xs">
+      <option value="ru">русский</option>
+      <option value="en">english</option>
+    </select>
+    <p class="text-xs text-stone-500">
+      Транскрипт через whisper (302.ai), запишется в body_md события, сразу запустится litops-разбор.
+      Лимит файла 50 МБ. До часа звука ≈ $0.36, считается как fast-вызов.
+    </p>
+    <button type="submit" class="bg-violet-700 text-white px-4 py-1.5 rounded text-sm font-semibold hover:bg-violet-600">
+      🎙 → транскрипт
+    </button>
+  </form>
+</details>
+
 <!-- Действия с событием -->
 <div class="flex gap-2 flex-wrap text-sm">
   {% if event.body_md and event.body_md | length > 50 %}

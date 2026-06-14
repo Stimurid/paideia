@@ -153,10 +153,15 @@
               ∇ {{ m.created_at[:16] }}
               {% if m.tokens %}· {{ m.tokens }} tok{% endif %}
               {% if m.duration_ms %}· {{ (m.duration_ms / 1000) | round(1) }} c{% endif %}
+              <button class="speak-btn text-xs text-stone-400 hover:text-violet-700 ml-2"
+                      data-text="{{ m.content | urlencode }}" title="озвучить">🔊</button>
             </div>
           </div>
         {% endif %}
       {% endfor %}
+      <script>
+        document.querySelectorAll('.speak-btn').forEach(b => b.addEventListener('click', () => speak(decodeURIComponent(b.dataset.text), b)));
+      </script>
     </div>
 
     <form class="kai-input-row" id="kai-form">
@@ -309,9 +314,32 @@ function appendBot(text, meta) {
   const el = document.createElement('div');
   el.className = 'kai-msg';
   const html = text.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>');
-  el.innerHTML = `<div class="kai-msg-bot"><p>${html}</p></div><div class="kai-msg-meta">∇ ${meta || ''}</div>`;
+  const speakBtn = `<button class="speak-btn text-xs text-stone-400 hover:text-violet-700 ml-2" data-text="${encodeURIComponent(text)}" title="озвучить через TTS">🔊</button>`;
+  el.innerHTML = `<div class="kai-msg-bot"><p>${html}</p></div><div class="kai-msg-meta">∇ ${meta || ''} ${speakBtn}</div>`;
   document.getElementById('msg-list').appendChild(el);
+  el.querySelectorAll('.speak-btn').forEach(b => b.addEventListener('click', () => speak(decodeURIComponent(b.dataset.text), b)));
   scrollDown();
+}
+
+async function speak(text, btn) {
+  if (btn) { btn.disabled = true; btn.textContent = '⏳'; }
+  try {
+    const r = await fetch('/api/voice/tts', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({text}),
+    });
+    if (r.status === 503) {
+      alert('TTS не настроен (нужен ELEVENLABS_API_KEY на сервере)');
+      return;
+    }
+    if (!r.ok) { alert('TTS error: ' + (await r.text()).slice(0,200)); return; }
+    const blob = await r.blob();
+    const audio = new Audio(URL.createObjectURL(blob));
+    audio.play();
+    if (window.refreshTokens) setTimeout(refreshTokens, 500);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🔊'; }
+  }
 }
 function scrollDown() {
   const list = document.getElementById('msg-list');

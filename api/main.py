@@ -2323,6 +2323,134 @@ def api_discuss_config(discuss_id: str, payload: DiscussConfigPayload) -> Any:
     return JSONResponse({"ok": True})
 
 
+# --- Voice: TTS + STT ---
+
+
+class TTSPayload(BaseModel):
+    text: str
+    voice_id: str | None = None
+
+
+@app.post("/api/voice/tts")
+def api_voice_tts(payload: TTSPayload, request: Request) -> Any:
+    """Текст → mp3 audio. Требует ELEVENLABS_API_KEY."""
+    from . import voice as v
+    if not v.tts_configured():
+        raise HTTPException(503, "TTS не настроен (ELEVENLABS_API_KEY)")
+    sid = request.cookies.get(session_mod.COOKIE_NAME)
+    ip = request.client.host if request.client else None
+    # TTS считаем как fast-вызов (не deep)
+    rl = session_mod.check_rate_limit(sid, ip, "fast")
+    if not rl["allowed"]:
+        raise HTTPException(429, "Лимит исчерпан.")
+    try:
+        audio = v.synthesize(payload.text, voice_id=payload.voice_id)
+    except httpx.HTTPError as exc:
+        raise HTTPException(502, f"TTS provider error: {exc}")
+    except Exception as exc:
+        raise HTTPException(500, f"TTS failed: {exc}")
+    from fastapi.responses import Response
+    return Response(content=audio, media_type="audio/mpeg")
+
+
+@app.get("/api/voice/quota")
+def api_voice_quota() -> Any:
+    from . import voice as v
+    try:
+        return JSONResponse(v.quota_status())
+    except Exception as exc:
+        raise HTTPException(500, str(exc))
+
+
+@app.get("/api/voice/voices")
+def api_voice_voices() -> Any:
+    from . import voice as v
+    try:
+        return JSONResponse({"voices": v.list_voices()})
+    except Exception as exc:
+        raise HTTPException(500, str(exc))
+
+
+@app.post("/api/voice/transcribe")
+async def api_voice_transcribe(request: Request) -> Any:
+    """Multipart upload audio → транскрипт через whisper."""
+    from . import voice as v
+    form = await request.form()
+    file = form.get("file")
+    if not file:
+        raise HTTPException(400, "file field required")
+    language = form.get("language", "ru")
+    sid = request.cookies.get(session_mod.COOKIE_NAME)
+    ip = request.client.host if request.client else None
+    rl = session_mod.check_rate_limit(sid, ip, "fast")
+    if not rl["allowed"]:
+        raise HTTPException(429, "Лимит исчерпан.")
+    data = await file.read()
+    if len(data) > 50_000_000:
+        raise HTTPException(413, "file too big (50 MB max)")
+    try:
+        result = v.transcribe(data, filename=file.filename or "audio.mp3",
+                              language=language)
+    except Exception as exc:
+        raise HTTPException(500, f"STT failed: {exc}")
+    return JSONResponse(result)
+
+
+@app.post("/api/course/event/{event_id}/transcribe-upload")
+async def api_event_transcribe_upload(request: Request, event_id: str) -> Any:
+    """Загрузка аудио на событие → транскрипт → запись в body_md → автозапуск litops."""
+    from . import voice as v
+    from . import litops as litops_mod
+    form = await request.form()
+    file = form.get("file")
+    if not file:
+        raise HTTPException(400, "file field required")
+    language = form.get("language", "ru")
+    sid = request.cookies.get(session_mod.COOKIE_NAME)
+    ip = request.client.host if request.client else None
+    rl = session_mod.check_rate_limit(sid, ip, "fast")
+    if not rl["allowed"]:
+        raise HTTPException(429, "Лимит исчерпан.")
+    data = await file.read()
+    if len(data) > 50_000_000:
+        raise HTTPException(413, "file too big (50 MB max)")
+    try:
+        result = v.transcribe(data, filename=file.filename or "lecture.mp3",
+                              language=language)
+    except Exception as exc:
+        raise HTTPException(500, f"STT failed: {exc}")
+    transcript = result.get("text", "").strip()
+    if not transcript:
+        raise HTTPException(500, "empty transcript")
+    # Пишем в body_md события (append если уже есть)
+    conn = open_db()
+    try:
+        row = conn.execute(
+            "SELECT body_md, course_id FROM course_events WHERE id = ?",
+            (event_id,),
+        ).fetchone()
+        if not row:
+            raise HTTPException(404, "event not found")
+        existing = (row["body_md"] or "").strip()
+        marker = f"\n\n--- транскрипт ({file.filename}, {len(data)/1e6:.1f} MB) ---\n\n"
+        new_body = (existing + marker + transcript) if existing else transcript
+        conn.execute(
+            "UPDATE course_events SET body_md = ? WHERE id = ?",
+            (new_body, event_id),
+        )
+        conn.commit()
+        course_id = row["course_id"]
+    finally:
+        conn.close()
+    # Автозапуск litops
+    try:
+        litops_mod.extract_from_event(event_id)
+    except Exception:
+        pass
+    return RedirectResponse(
+        url=f"/course/{course_id}/event/{event_id}", status_code=303)
+
+
 @app.post("/api/discuss/{discuss_id}/delete")
 def api_discuss_delete(discuss_id: str) -> Any:
     from . import discuss as ds_mod

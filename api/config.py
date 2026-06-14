@@ -62,6 +62,11 @@ class Settings(BaseSettings):
     # Несколько кодов через запятую: BYPASS_CODES=test1,test2,vip
     bypass_codes: str = ""
 
+    # F2 voice: ElevenLabs TTS
+    elevenlabs_api_key: str = ""
+    elevenlabs_voice_id: str = "nPczCjzI2devNBz1zQrb"  # Brian — низкий философский
+    elevenlabs_model: str = "eleven_multilingual_v2"   # русский через мультиязычную
+
     @property
     def db_path(self) -> Path:
         return ROOT / self.paideia_db_path
