@@ -321,25 +321,68 @@ function appendBot(text, meta) {
   scrollDown();
 }
 
+// === TTS ===
+let _currentAudio = null;
+let _currentUtter = null;
+
+function _stopSpeaking() {
+  if (_currentAudio) { _currentAudio.pause(); _currentAudio = null; }
+  if (_currentUtter) { window.speechSynthesis.cancel(); _currentUtter = null; }
+}
+
+function _speakBrowser(text, btn) {
+  if (!('speechSynthesis' in window)) {
+    alert('Браузер не умеет TTS. Открой в Chrome / Safari.');
+    return;
+  }
+  const u = new SpeechSynthesisUtterance(text);
+  // подберём русский голос если есть
+  const voices = window.speechSynthesis.getVoices();
+  const ru = voices.find(v => v.lang.startsWith('ru'));
+  if (ru) u.voice = ru;
+  u.rate = 1.0; u.pitch = 0.95;
+  u.onend = () => { _currentUtter = null; if (btn) btn.textContent = '🔊'; };
+  u.onerror = () => { _currentUtter = null; if (btn) btn.textContent = '🔊'; };
+  _currentUtter = u;
+  window.speechSynthesis.speak(u);
+}
+
 async function speak(text, btn) {
-  if (btn) { btn.disabled = true; btn.textContent = '⏳'; }
+  // Toggle — если уже играет, останавливаем
+  if (_currentAudio || _currentUtter) {
+    _stopSpeaking();
+    if (btn) btn.textContent = '🔊';
+    return;
+  }
+  if (btn) { btn.textContent = '⏸'; }
   try {
     const r = await fetch('/api/voice/tts', {
       method: 'POST', headers: {'Content-Type':'application/json'},
       body: JSON.stringify({text}),
     });
     if (r.status === 503) {
-      alert('TTS не настроен (нужен ELEVENLABS_API_KEY на сервере)');
+      // ElevenLabs не настроен — fallback на браузерный TTS
+      _speakBrowser(text, btn);
       return;
     }
-    if (!r.ok) { alert('TTS error: ' + (await r.text()).slice(0,200)); return; }
+    if (!r.ok) {
+      _speakBrowser(text, btn);  // на любую ошибку fallback
+      return;
+    }
     const blob = await r.blob();
-    const audio = new Audio(URL.createObjectURL(blob));
-    audio.play();
+    _currentAudio = new Audio(URL.createObjectURL(blob));
+    _currentAudio.onended = () => { _currentAudio = null; if (btn) btn.textContent = '🔊'; };
+    _currentAudio.play();
     if (window.refreshTokens) setTimeout(refreshTokens, 500);
-  } finally {
-    if (btn) { btn.disabled = false; btn.textContent = '🔊'; }
+  } catch (err) {
+    _speakBrowser(text, btn);
   }
+}
+
+// preload голосов для Chromium (load асинхронно)
+if ('speechSynthesis' in window) {
+  window.speechSynthesis.onvoiceschanged = () => {};
+  window.speechSynthesis.getVoices();
 }
 function scrollDown() {
   const list = document.getElementById('msg-list');
