@@ -1,0 +1,59 @@
+install_id: paideia_guard_control_plane_slice_v2_2026_06_14
+payload_class: guard_control_plane_docs_receipt_only
+source_agentum_commit: 0c34643
+paideia_runtime_baseline_commit: b3657d8
+install_branch: agentum/guard-control-plane-slice-v2
+supersedes:
+  - branch: agentum/guard-control-plane-slice
+    reason: old branch included Agentum install before later runtime work and is not a clean merge source
+installed_files:
+  - .agentum/install_receipt.yaml
+  - docs/agent/AGENTUM_INSTALL_SCOPE.md
+  - docs/agent/LLM_CALL_REGISTRY_SUMMARY.md
+  - docs/agent/PROMPT_OVERLAY_POLICY.md
+  - docs/agent/TRIZ_MODULE_BOUNDARY.md
+  - docs/agent/UX_OPERATOR_SURFACE_PATTERNS.md
+  - docs/agent/SECRET_AND_PROVIDER_TOPOLOGY.md
+  - docs/agent/AGENT_WORKING_ENVIRONMENT.md
+  - docs/agent/TARGET_VERIFICATION_STATUS.md
+forbidden_surfaces:
+  - api/**
+  - prompts/**
+  - prompts/scenarios/**
+  - content/**
+  - db/schema.sql
+  - templates/**
+  - deploy/**
+  - .env
+  - .env.*
+  - raw/**
+  - db/llm_cache/**
+  - runtime/provider/TRIZ/Kairon/BYOK/auth code
+  - production/VM state
+no_touch_paths:
+  - .env
+  - .env.*
+  - .venv/**
+  - .pytest_cache/**
+  - __pycache__/**
+  - db/paideia.db
+  - db/paideia.db-shm
+  - db/paideia.db-wal
+  - db/llm_cache/**
+  - raw/**
+raw_policy:
+  classification: source_wave_artifact_keep_tracked_for_now_with_lfs_candidates
+  largest_file: raw/занятие 2_5.pptx
+  largest_file_mib: 70.47
+  over_100_mib: false
+  rule: do not delete or normalize raw corpus during Agentum install
+llm_cache_policy:
+  classification: runtime_cache_should_remain_untracked_ignored
+  tracked_after_packaging: false
+  local_files_may_exist_on_disk: true
+rollback_command: git revert HEAD
+notes:
+  - Agentum master repository was not copied wholesale.
+  - This v2 install is based on clean runtime-only main baseline b3657d8.
+  - This install does not modify runtime behavior, prompts, templates, deployment, raw corpus, provider config, Kairon, BYOK, or auth code.
+  - Docs-level control plane is context, not hard enforcement.
