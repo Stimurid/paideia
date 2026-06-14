@@ -108,6 +108,8 @@
       <div class="font-semibold text-stone-600 uppercase tracking-wide mb-2">Навигация</div>
       <a href="/course/{{ course.id }}/members" class="block text-violet-700 hover:underline">👥 Участники и работы</a>
       <a href="/discuss/new?course_id={{ course.id }}" class="block text-violet-700 hover:underline">∇ Обсудить курс с Kaiyona</a>
+      <button onclick="runReflection('{{ course.id }}')" id="reflect-btn" class="block text-left text-violet-700 hover:underline w-full">🪞 Методологический протокол (G6)</button>
+      <div id="reflect-result" class="hidden mt-2 text-xs bg-violet-50 border border-violet-200 rounded p-2 max-h-96 overflow-y-auto"></div>
       <details class="mt-1">
         <summary class="cursor-pointer text-stone-600">📈 Динамика проекта…</summary>
         <form method="get" action="/course/{{ course.id }}/dynamics-view" class="mt-1 flex gap-1">
@@ -130,7 +132,31 @@
       транскриптом/расшифровкой → жми «разобрать» в его шапке.
       LLM вытащит вопросы аудитории, предъявленные модели, затруднения и
       открытые петли — с цитатами-якорями и ссылками на концепты библиотеки.
+      Кеш по body-hash: повторный разбор того же текста бесплатный.
     </div>
+
+<script>
+async function runReflection(cid) {
+  const btn = document.getElementById('reflect-btn');
+  const out = document.getElementById('reflect-result');
+  btn.disabled = true; btn.textContent = '⏳ собираю протокол (deep, до 60 с)...';
+  try {
+    const r = await fetch(`/api/course/${cid}/reflection`, {method: 'POST'});
+    if (r.status === 429) {
+      out.textContent = '⚠ лимит deep исчерпан';
+    } else if (!r.ok) {
+      out.textContent = '⚠ ' + (await r.text()).slice(0, 200);
+    } else {
+      const d = await r.json();
+      out.innerHTML = '<pre class="whitespace-pre-wrap">' + JSON.stringify(d.protocol, null, 2) + '</pre>';
+    }
+    out.classList.remove('hidden');
+  } finally {
+    btn.disabled = false; btn.textContent = '🪞 Методологический протокол (G6)';
+    if (window.refreshTokens) setTimeout(refreshTokens, 500);
+  }
+}
+</script>
   </aside>
 </div>
 

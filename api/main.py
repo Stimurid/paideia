@@ -2191,6 +2191,32 @@ def service_feedback_thread_page(request: Request, thread_id: str) -> Any:
     )
 
 
+@app.get("/service/feedback/clusters")
+def service_feedback_clusters(request: Request) -> Any:
+    """Кластеризация фидбэка по тегам."""
+    from . import feedback as fb_mod
+    clusters = fb_mod.cluster_by_tags(min_size=2)
+    return JSONResponse({"clusters": clusters})
+
+
+@app.post("/api/course/{course_id}/reflection")
+def api_course_reflection(course_id: str, request: Request) -> Any:
+    """F3-G6: построить методологический протокол курса (deep LLM)."""
+    sid = request.cookies.get(session_mod.COOKIE_NAME)
+    ip = request.client.host if request.client else None
+    rl = session_mod.check_rate_limit(sid, ip, "deep")
+    if not rl["allowed"]:
+        raise HTTPException(429, "Лимит deep исчерпан. Введи код или поддержи.")
+    from . import litops as litops_mod
+    try:
+        result = litops_mod.generate_course_reflection(course_id)
+    except Exception as exc:
+        raise HTTPException(500, f"reflection failed: {exc}")
+    if result.get("status") != "ok":
+        raise HTTPException(400, result.get("msg") or "reflection failed")
+    return JSONResponse(result)
+
+
 @app.get("/service/feedback.md")
 def service_feedback_export() -> Any:
     from fastapi.responses import Response
@@ -2383,6 +2409,14 @@ ROLES = [
 def onboarding_page(request: Request) -> Any:
     return templates.TemplateResponse(
         request, "onboarding.html", {"roles": ROLES},
+    )
+
+
+@app.get("/quickstart", response_class=HTMLResponse)
+def quickstart_page(request: Request) -> Any:
+    current_role = request.cookies.get(session_mod.ROLE_COOKIE)
+    return templates.TemplateResponse(
+        request, "quickstart.html", {"current_role": current_role},
     )
 
 

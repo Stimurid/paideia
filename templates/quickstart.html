@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}Быстрый старт — Paideia{% endblock %}
+{% block content %}
+
+<div class="max-w-4xl mx-auto">
+  <h1 class="text-2xl font-bold mb-2">🚀 Быстрый старт</h1>
+  <p class="text-stone-600 mb-6 text-sm">
+    Минимальный путь к работе под каждую из 4 ролей.
+    {% if current_role %}<span class="pill bg-violet-100 text-violet-700 ml-2">твоя роль: {{ current_role }}</span>{% endif %}
+    <a href="/onboarding" class="text-violet-700 hover:underline ml-2 text-xs">сменить</a>
+  </p>
+
+  {% set guides = [
+    {"key": "teacher", "icon": "🎓", "title": "Преподаватель",
+     "what_for": "Проектируешь курс / модуль с опорой на корпус и ТРИЗ-приёмы.",
+     "steps": [
+       {"label": "Создай проект через Wizard", "url": "/project/new/wizard", "note": "тип преподавателя + AI-персон + ролевая модель"},
+       {"label": "Найди аналоги под замысел", "url": "/match", "note": "опишешь курс свободным текстом → 5 похожих кейсов"},
+       {"label": "Открой канвас 18 секций", "url": "/projects", "note": "выбери проект, жми «уточнить все пустые через LLM»"},
+       {"label": "Прогон сценариев лаборатории", "url": "/projects", "note": "KOSMOS / Stakeholder Pressure / TRIZ"},
+       {"label": "Обсуди с Kaiyona", "url": "/discuss/new", "note": "preset «Genius-Analyst», цель «Критик»"},
+       {"label": "Экспорт документов", "url": "/projects", "note": "РПД / силлабус / заявка / бизнес-план"}
+     ]},
+    {"key": "methodologist", "icon": "🔬", "title": "Методолог / исследователь",
+     "what_for": "Работаешь с теорией корпуса: гипотезы, противоречия, контр-сигналы.",
+     "steps": [
+       {"label": "Карта корпуса", "url": "/map", "note": "118 кейсов на 2D-проекции"},
+       {"label": "Теория", "url": "/theory", "note": "статусы гипотез H1-H5"},
+       {"label": "Мониторинг волн", "url": "/waves", "note": "новый wave-runner и дифф"},
+       {"label": "Конфликты концептов библиотеки", "url": "/library/conflicts", "note": "F1-селектор: пары concept × concept с школами"},
+       {"label": "Counter-signals", "url": "/counter-signals", "note": "6 опровергателей гипотез"},
+       {"label": "Обсуди с Kaiyona", "url": "/discuss/new", "note": "preset «Metaphysical-Engineer», цель «Распаковщик»"}
+     ]},
+    {"key": "admin", "icon": "🏛️", "title": "Декан / администратор",
+     "what_for": "Подбор аналогов под программу, обстрел замысла стейкхолдерами.",
+     "steps": [
+       {"label": "Подбор аналогов (Match)", "url": "/match", "note": "опиши программу, найдёт похожие университеты и риски"},
+       {"label": "Каталог по фасетам", "url": "/catalog", "note": "фильтр по агентности, контролю, эконом-контуру"},
+       {"label": "Создать проект программы", "url": "/project/new/wizard", "note": "Wizard разведёт тип преподавателя, AI-персоны"},
+       {"label": "Stakeholder Pressure", "url": "/projects", "note": "обстрел 7 стейкхолдерами"},
+       {"label": "Anti-Agent-Washing", "url": "/projects", "note": "аудит на признаки маркетингового washing"},
+       {"label": "Обсуди с Kaiyona", "url": "/discuss/new", "note": "цель «Стресс-тест», уровень критики 3-4"}
+     ]},
+    {"key": "student", "icon": "🎒", "title": "Студент / участник курса",
+     "what_for": "Доступ к материалам активного курса, разбор лекций и заданий.",
+     "steps": [
+       {"label": "Список курсов", "url": "/courses", "note": "выбери активный — сессия запомнит"},
+       {"label": "Лента событий курса", "url": "/courses", "note": "лекции / семинары / д/з / чаты"},
+       {"label": "Страница события", "url": "/courses", "note": "две колонки: автор + студенты"},
+       {"label": "Библиотека книг", "url": "/library", "note": "Выготский, Хатчинс, Делёз, Фуко"},
+       {"label": "Обсуди с Kaiyona", "url": "/discuss/new", "note": "цель «Со-педагог» включится автоматически в курсе"},
+       {"label": "Спроси в концьерже", "url": "/", "note": "форма «спросить» на главной — простые ответы под роль"}
+     ]}
+  ] %}
+
+  <div class="space-y-6">
+    {% for g in guides %}
+      <div class="bg-white border-2 {% if g.key == current_role %}border-violet-500{% else %}border-stone-200{% endif %} rounded-xl p-5">
+        <div class="flex items-start gap-4 mb-4 flex-wrap">
+          <span class="text-3xl">{{ g.icon }}</span>
+          <div class="flex-1 min-w-0">
+            <h2 class="text-xl font-bold">{{ g.title }}</h2>
+            <p class="text-sm text-stone-600 mt-1">{{ g.what_for }}</p>
+          </div>
+          {% if g.key != current_role %}
+            <form method="post" action="/api/onboarding/select-role">
+              <input type="hidden" name="role" value="{{ g.key }}">
+              <button class="text-xs bg-stone-100 text-stone-700 px-3 py-1.5 rounded hover:bg-violet-100">выбрать роль</button>
+            </form>
+          {% endif %}
+        </div>
+        <ol class="relative border-l-2 border-violet-200 ml-3 space-y-3">
+          {% for s in g.steps %}
+            <li class="ml-5">
+              <span class="absolute -left-2.5 w-5 h-5 bg-violet-600 text-white rounded-full text-xs flex items-center justify-center">{{ loop.index }}</span>
+              <a href="{{ s.url }}" class="font-semibold text-sm hover:underline text-violet-900">{{ s.label }}</a>
+              <p class="text-xs text-stone-600 mt-0.5">{{ s.note }}</p>
+            </li>
+          {% endfor %}
+        </ol>
+      </div>
+    {% endfor %}
+  </div>
+
+  <div class="mt-8 bg-amber-50 border border-amber-200 rounded p-4 text-sm">
+    <strong>Что под капотом:</strong>
+    <ul class="list-disc ml-5 mt-2 space-y-1 text-stone-700">
+      <li>302.ai как роутер моделей: <code>fast</code> = gpt-4.1-mini · <code>deep</code> = gpt-5 · <code>search</code> = sonar-pro</li>
+      <li>Дневной лимит платформы $1; token-counter в навбаре с ценой ×2</li>
+      <li>Лимиты снимаются: <a href="/support" class="text-violet-700 hover:underline">/support</a> — донат или 🔑 код</li>
+      <li>Любая идея/баг — кнопка 💬 в левом нижнем углу любой страницы</li>
+    </ul>
+  </div>
+</div>
+
+{% endblock %}

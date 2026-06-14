@@ -319,18 +319,31 @@ def _load_project_brief(project_id: str) -> dict | None:
     return post.metadata
 
 
-def _load_course_brief(course_id: str) -> tuple[dict | None, list[dict]]:
+def _load_course_brief(course_id: str, *,
+                        my_role: str | None = None) -> tuple[dict | None, list[dict]]:
+    """Грузит курс + события. Для student-роли фильтрует timestamp ≤ now
+    (не спойлерим будущие лекции — F3-G4 Participant Lens)."""
     if not course_id:
         return None, []
     conn = open_db()
     try:
         course = fetch_one(conn, "SELECT * FROM courses WHERE id = ?", (course_id,))
-        events = fetch_all(
-            conn,
-            "SELECT id, kind, title, happened_at, body_md FROM course_events "
-            "WHERE course_id = ? ORDER BY happened_at DESC LIMIT 15",
-            (course_id,),
-        )
+        if my_role == "student":
+            events = fetch_all(
+                conn,
+                """SELECT id, kind, title, happened_at, body_md FROM course_events
+                   WHERE course_id = ?
+                     AND (happened_at IS NULL OR happened_at <= datetime('now'))
+                   ORDER BY happened_at DESC LIMIT 15""",
+                (course_id,),
+            )
+        else:
+            events = fetch_all(
+                conn,
+                "SELECT id, kind, title, happened_at, body_md FROM course_events "
+                "WHERE course_id = ? ORDER BY happened_at DESC LIMIT 15",
+                (course_id,),
+            )
         return course, events
     finally:
         conn.close()
@@ -345,20 +358,19 @@ def send_message(discuss_id: str, user_text: str) -> dict:
     config = sess["config"] or DEFAULT_CONFIG
 
     project = _load_project_brief(sess.get("project_id"))
-    course, course_events = _load_course_brief(sess.get("course_id"))
-
-    # Узнаём роль юзера в курсе
+    # Узнаём роль юзера в курсе ДО загрузки событий (для timestamp-фильтра)
     my_role = None
-    if course and sess.get("session_id"):
+    if sess.get("course_id") and sess.get("session_id"):
         conn = open_db()
         try:
             row = conn.execute(
                 "SELECT role FROM course_role_bindings WHERE course_id=? AND session_id=?",
-                (course["id"], sess["session_id"]),
+                (sess["course_id"], sess["session_id"]),
             ).fetchone()
             my_role = row[0] if row else None
         finally:
             conn.close()
+    course, course_events = _load_course_brief(sess.get("course_id"), my_role=my_role)
 
     # Динамика проекта по курсу (если есть и проект, и курс)
     project_dynamics = None

@@ -311,3 +311,31 @@ def stats() -> dict:
         }
     finally:
         conn.close()
+
+
+def cluster_by_tags(min_size: int = 2) -> list[dict]:
+    """Простейшая кластеризация: группы тредов с пересекающимися тегами.
+    Возвращает [{tag, size, thread_ids, severity_breakdown, summaries[]}]."""
+    threads = list_feedback(status="saved", limit=10000)
+    by_tag: dict[str, list[dict]] = {}
+    for t in threads:
+        for tag in (t.get("tags") or []):
+            by_tag.setdefault(tag, []).append(t)
+    clusters = []
+    for tag, items in by_tag.items():
+        if len(items) < min_size:
+            continue
+        sev = {}
+        for it in items:
+            s = it.get("severity") or "?"
+            sev[s] = sev.get(s, 0) + 1
+        clusters.append({
+            "tag": tag,
+            "size": len(items),
+            "severity_breakdown": sev,
+            "summaries": [{"id": it["id"], "summary": it["summary"],
+                            "severity": it["severity"], "category": it["category"]}
+                           for it in items[:10]],
+        })
+    clusters.sort(key=lambda c: c["size"], reverse=True)
+    return clusters

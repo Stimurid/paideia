@@ -269,6 +269,7 @@ CANVAS_SECTIONS: list[tuple[str, str]] = [
     ("signature_context",     "Сигнатура и контекст"),
     ("problem_situation",     "Проблема и исходная ситуация"),
     ("effect_hypothesis",     "Гипотеза эффекта"),
+    ("protected_core",        "🛡 Protected core (что нельзя ломать ради адаптации)"),
     ("ai_architecture",       "Архитектура AI"),
     ("team_roles",            "Ролевая модель команды"),
     ("ai_role",               "Роль AI"),
