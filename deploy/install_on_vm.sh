@@ -77,12 +77,17 @@ EOF
 chown "$INSTANCE:$INSTANCE" "$ETC_DIR/${INSTANCE}.env"
 chmod 600 "$ETC_DIR/${INSTANCE}.env"
 
-echo "== [6/9] Reindex БД + SystemModels =="
+echo "== [6/9] Migration (alembic) + reindex =="
 mkdir -p "$APP_DIR/db"
 chown "$INSTANCE:$INSTANCE" "$APP_DIR/db"
-# Дроп БД: схема может меняться между деплоями (новые колонки в llm_runs и т.д.).
-# content/ — источник истины, БД пересобирается из неё.
-sudo -u "$INSTANCE" rm -f "$APP_DIR/db/paideia.db" "$APP_DIR/db/paideia.db-shm" "$APP_DIR/db/paideia.db-wal" 2>/dev/null || true
+# Alembic upgrade head на live-БД (миграции идемпотентны через CREATE IF NOT EXISTS).
+# Если стейта alembic нет, baseline создаст таблицы и пометит как 0001.
+if [[ -f "$APP_DIR/alembic.ini" ]]; then
+    sudo -u "$INSTANCE" bash -c "cd $APP_DIR && .venv/bin/alembic upgrade head" || {
+        echo "WARN: alembic upgrade упал, продолжаю — БД может быть в legacy-состоянии"
+    }
+fi
+# Reindex из content/ — пересоберёт catalog/theory не трогая discuss/feedback/courses/library.
 sudo -u "$INSTANCE" bash -c "cd $APP_DIR && .venv/bin/python -m scripts.reindex" || {
     echo "WARN: reindex упал, продолжаю — БД пересоздастся при запуске"
 }
@@ -91,6 +96,16 @@ sudo -u "$INSTANCE" bash -c "
     set -a; source $ETC_DIR/${INSTANCE}.env; set +a
     cd $APP_DIR && .venv/bin/python -X utf8 -m scripts.build_system_models
 " || echo "  WARN: build_system_models упал (опционально)"
+
+echo "== [6.5/9] backup timer =="
+apt-get install -y -qq sqlite3 >/dev/null 2>&1 || true
+mkdir -p /srv/paideia/backup
+chown -R "$INSTANCE:$INSTANCE" /srv/paideia
+chmod +x "$APP_DIR/deploy/backup.sh"
+cp "$APP_DIR/deploy/paideia-backup.service" /etc/systemd/system/paideia-backup.service
+cp "$APP_DIR/deploy/paideia-backup.timer"   /etc/systemd/system/paideia-backup.timer
+systemctl daemon-reload
+systemctl enable --now paideia-backup.timer >/dev/null 2>&1 || true
 
 echo "== [7/9] systemd =="
 cat > "$UNIT" <<EOF

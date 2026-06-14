@@ -1,0 +1,11 @@
+[Unit]
+Description=Paideia daily SQLite + content backup
+Wants=paideia-backup.timer
+
+[Service]
+Type=oneshot
+User=paideia
+Group=paideia
+ExecStart=/opt/paideia/app/deploy/backup.sh
+Nice=10
+IOSchedulingClass=idle

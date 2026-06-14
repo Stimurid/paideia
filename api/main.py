@@ -2540,6 +2540,105 @@ def onboarding_page(request: Request) -> Any:
     )
 
 
+# --- Kairon: публикационная модель проекта/курса ---
+
+
+@app.get("/kairon/{target_kind}/{target_id}", response_class=HTMLResponse)
+def kairon_page(request: Request, target_kind: str, target_id: str) -> Any:
+    if target_kind not in ("project", "course"):
+        raise HTTPException(404)
+    from . import kairon
+    latest = kairon.latest(target_kind, target_id)
+    history = kairon.list_for_target(target_kind, target_id)
+    return templates.TemplateResponse(
+        request, "kairon.html",
+        {"target_kind": target_kind, "target_id": target_id,
+         "latest": latest, "history": history},
+    )
+
+
+@app.post("/api/kairon/{target_kind}/{target_id}/analyze")
+def api_kairon_analyze(request: Request, target_kind: str, target_id: str,
+                       model_role: str = Form("deep")) -> Any:
+    if target_kind not in ("project", "course"):
+        raise HTTPException(404)
+    sid = request.cookies.get(session_mod.COOKIE_NAME)
+    ip = request.client.host if request.client else None
+    rl = session_mod.check_rate_limit(sid, ip, model_role)
+    if not rl["allowed"]:
+        raise HTTPException(429, "Лимит исчерпан.")
+    from . import kairon
+    try:
+        result = kairon.analyze(target_kind, target_id, model_role=model_role)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+    except Exception as exc:
+        raise HTTPException(500, f"kairon failed: {exc}")
+    return RedirectResponse(url=f"/kairon/{target_kind}/{target_id}", status_code=303)
+
+
+# --- Код-логин для тестеров ---
+
+
+@app.get("/login", response_class=HTMLResponse)
+def login_page(request: Request) -> Any:
+    from . import auth_codes as ac
+    sid = request.cookies.get(session_mod.COOKIE_NAME)
+    identity = ac.get_identity(sid)
+    return templates.TemplateResponse(
+        request, "login.html",
+        {"identity": identity, "msg": request.query_params.get("msg", "")},
+    )
+
+
+@app.post("/api/login/redeem")
+def api_login_redeem(request: Request, code: str = Form(...)) -> Any:
+    from . import auth_codes as ac
+    sid = request.cookies.get(session_mod.COOKIE_NAME)
+    if not sid:
+        raise HTTPException(400, "no session")
+    result = ac.redeem(code, sid)
+    if not result["ok"]:
+        return RedirectResponse(url=f"/login?msg={result['msg']}", status_code=303)
+    return RedirectResponse(url=f"/login?msg=✓ привет, {result['nickname']}", status_code=303)
+
+
+@app.get("/service/codes", response_class=HTMLResponse)
+def service_codes(request: Request) -> Any:
+    """Только владелец (admin/owner) видит коды и создаёт их."""
+    from . import auth_codes as ac
+    sid = request.cookies.get(session_mod.COOKIE_NAME)
+    identity = ac.get_identity(sid)
+    if not identity.get("is_owner"):
+        return templates.TemplateResponse(
+            request, "login.html",
+            {"identity": identity, "msg": "Эта страница только для admin/owner",
+             "want_owner": True},
+        )
+    codes = ac.list_codes()
+    return templates.TemplateResponse(
+        request, "codes.html",
+        {"codes": codes, "identity": identity},
+    )
+
+
+@app.post("/api/service/codes/generate")
+def api_generate_code(
+    request: Request,
+    nickname: str = Form(...), role: str = Form("tester"),
+    ttl_days: int = Form(90), note: str = Form(""),
+) -> Any:
+    from . import auth_codes as ac
+    sid = request.cookies.get(session_mod.COOKIE_NAME)
+    identity = ac.get_identity(sid)
+    if not identity.get("is_owner"):
+        raise HTTPException(403, "Только owner может выдавать коды")
+    code = ac.generate_code(nickname=nickname, role=role,
+                             created_by=identity.get("nickname"),
+                             ttl_days=ttl_days, note=note)
+    return RedirectResponse(url=f"/service/codes?new={code}", status_code=303)
+
+
 # --- BYOK: свой LLM-ключ ---
 
 
@@ -3003,7 +3102,13 @@ def api_event_add_artifact(
 
 
 @app.post("/api/course/event/artifact/{artifact_id}/delete")
-def api_artifact_delete(artifact_id: str) -> Any:
+def api_artifact_delete(artifact_id: str, request: Request) -> Any:
+    # destructive: только owner может удалять
+    from . import auth_codes as ac
+    sid = request.cookies.get(session_mod.COOKIE_NAME)
+    identity = ac.get_identity(sid)
+    if not identity.get("is_owner"):
+        raise HTTPException(403, "Только owner может удалять артефакты. Войди по коду owner-роли.")
     from . import course_packs as cp
     conn = open_db()
     try:

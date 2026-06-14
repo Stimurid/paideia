@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Коды-приглашения — Paideia{% endblock %}
+{% block content %}
+
+<div class="max-w-4xl mx-auto">
+  <h1 class="text-2xl font-bold mb-2">🎟 Коды-приглашения</h1>
+  <p class="text-stone-500 text-sm mb-6">Выдаёшь тестерам код → они вводят на /login → их сессия связана с ником.</p>
+
+  {% if request.query_params.get("new") %}
+    <div class="bg-emerald-50 border border-emerald-300 rounded p-4 mb-4">
+      <div class="text-xs text-stone-500 uppercase">только что создан</div>
+      <div class="text-2xl font-mono font-bold mt-1">{{ request.query_params.get("new") }}</div>
+      <div class="text-xs text-stone-500 mt-1">передай тестеру в любом мессенджере</div>
+    </div>
+  {% endif %}
+
+  <form method="post" action="/api/service/codes/generate"
+        class="bg-white border border-stone-200 rounded-lg p-4 mb-6 grid grid-cols-2 gap-3 text-sm">
+    <div>
+      <label class="block text-xs uppercase text-stone-500 font-bold mb-1">никнейм *</label>
+      <input name="nickname" required placeholder="Чубаров" class="border border-stone-300 rounded px-2 py-1 w-full">
+    </div>
+    <div>
+      <label class="block text-xs uppercase text-stone-500 font-bold mb-1">роль</label>
+      <select name="role" class="border border-stone-300 rounded px-2 py-1 w-full">
+        <option value="tester">tester (обычный)</option>
+        <option value="owner">owner (доступ к /service/*)</option>
+        <option value="admin">admin (то же что owner)</option>
+      </select>
+    </div>
+    <div>
+      <label class="block text-xs uppercase text-stone-500 font-bold mb-1">TTL (дней)</label>
+      <input name="ttl_days" type="number" value="90" min="0" class="border border-stone-300 rounded px-2 py-1 w-full">
+    </div>
+    <div>
+      <label class="block text-xs uppercase text-stone-500 font-bold mb-1">заметка</label>
+      <input name="note" placeholder="опц." class="border border-stone-300 rounded px-2 py-1 w-full">
+    </div>
+    <div class="col-span-2">
+      <button class="bg-violet-700 text-white px-4 py-2 rounded font-semibold hover:bg-violet-600">+ выдать код</button>
+    </div>
+  </form>
+
+  <h2 class="text-sm uppercase font-bold text-stone-600 mb-2">все коды</h2>
+  {% if codes %}
+    <ul class="space-y-1 text-sm">
+      {% for c in codes %}
+        <li class="bg-white border border-stone-200 rounded p-2 flex items-center gap-3 text-sm">
+          <code class="font-mono">{{ c.code }}</code>
+          <span class="text-stone-700">{{ c.nickname }}</span>
+          <span class="pill bg-stone-100 text-stone-700 text-xs">{{ c.role }}</span>
+          {% if c.redeemed_at %}
+            <span class="text-xs text-emerald-600">✓ использован {{ c.redeemed_at[:16] }}</span>
+          {% elif c.expires_at and c.expires_at < (request.scope.now if false else '2026-12-31') %}
+            <span class="text-xs text-rose-700">истёк</span>
+          {% else %}
+            <span class="text-xs text-stone-500">pending</span>
+          {% endif %}
+          {% if c.note %}<span class="text-xs text-stone-400 ml-auto">{{ c.note }}</span>{% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <div class="bg-stone-50 border border-stone-200 rounded p-4 text-stone-500 text-sm">Кодов ещё нет.</div>
+  {% endif %}
+</div>
+
+{% endblock %}
