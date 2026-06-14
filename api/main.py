@@ -2540,6 +2540,61 @@ def onboarding_page(request: Request) -> Any:
     )
 
 
+# --- BYOK: свой LLM-ключ ---
+
+
+@app.get("/settings", response_class=HTMLResponse)
+def settings_page(request: Request) -> Any:
+    from . import byok
+    sid = request.cookies.get(session_mod.COOKIE_NAME)
+    key = byok.get_key(sid) if sid else None
+    if key:
+        # маскируем ключ для UI
+        k = key["api_key"]
+        key["api_key_masked"] = k[:8] + "..." + k[-4:] if len(k) > 12 else "***"
+        key["budget"] = byok.check_personal_budget(sid)
+    shared = byok.list_shared()
+    return templates.TemplateResponse(
+        request, "settings.html",
+        {"key": key, "shared_keys": shared},
+    )
+
+
+@app.post("/api/settings/save-key")
+def api_settings_save_key(
+    request: Request,
+    api_key: str = Form(...), base_url: str = Form(""),
+    nickname: str = Form(""), daily_limit_usd: float = Form(0),
+    shared: str = Form(""), share_daily_usd: float = Form(0),
+    fast_model: str = Form(""), deep_model: str = Form(""),
+    search_model: str = Form(""),
+) -> Any:
+    from . import byok
+    sid = request.cookies.get(session_mod.COOKIE_NAME)
+    if not sid:
+        raise HTTPException(400, "no session")
+    byok.save_key(
+        session_id=sid, api_key=api_key, base_url=base_url,
+        nickname=nickname, daily_limit_usd=daily_limit_usd,
+        shared=bool(shared), share_daily_usd=share_daily_usd,
+        fast_model=fast_model, deep_model=deep_model, search_model=search_model,
+    )
+    from .llm import invalidate_llm_cache
+    invalidate_llm_cache(sid)
+    return RedirectResponse(url="/settings?saved=1", status_code=303)
+
+
+@app.post("/api/settings/delete-key")
+def api_settings_delete_key(request: Request) -> Any:
+    from . import byok
+    sid = request.cookies.get(session_mod.COOKIE_NAME)
+    if sid:
+        byok.delete_key(sid)
+        from .llm import invalidate_llm_cache
+        invalidate_llm_cache(sid)
+    return RedirectResponse(url="/settings?deleted=1", status_code=303)
+
+
 @app.get("/quickstart", response_class=HTMLResponse)
 def quickstart_page(request: Request) -> Any:
     current_role = request.cookies.get(session_mod.ROLE_COOKIE)
@@ -3050,6 +3105,53 @@ def course_members_page(request: Request, course_id: str) -> Any:
          "by_nick": by_nick,
          "total_artifacts": len(student_arts)},
     )
+
+
+# --- Корпус-конвейер ---
+
+
+@app.get("/service/corpus-candidates", response_class=HTMLResponse)
+def service_corpus_candidates(request: Request, status: str = "pending",
+                               kind: str | None = None) -> Any:
+    from . import corpus_conveyor as cc
+    return templates.TemplateResponse(
+        request, "corpus_candidates.html",
+        {"candidates": cc.list_candidates(status=status, kind=kind),
+         "stats": cc.stats(),
+         "filter_status": status, "filter_kind": kind or ""},
+    )
+
+
+@app.post("/api/corpus-candidates/{cid}/decide")
+def api_candidate_decide(cid: str, request: Request,
+                          decision: str = Form(...)) -> Any:
+    from . import corpus_conveyor as cc
+    sid = request.cookies.get(session_mod.COOKIE_NAME)
+    try:
+        cc.decide(cid, decision, decided_by=sid)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+    return RedirectResponse(url="/service/corpus-candidates", status_code=303)
+
+
+@app.post("/api/course/event/{event_id}/harvest")
+def api_event_harvest(event_id: str) -> Any:
+    """Извлечь кандидатов в корпус из событий курса."""
+    from . import corpus_conveyor as cc
+    conn = open_db()
+    try:
+        row = conn.execute("SELECT course_id FROM course_events WHERE id = ?",
+                            (event_id,)).fetchone()
+    finally:
+        conn.close()
+    try:
+        result = cc.harvest_from_event(event_id)
+    except Exception as exc:
+        raise HTTPException(500, f"harvest failed: {exc}")
+    if not row:
+        return JSONResponse(result)
+    return RedirectResponse(
+        url=f"/course/{row['course_id']}/event/{event_id}", status_code=303)
 
 
 @app.post("/api/course/event/{event_id}/extract-litops")

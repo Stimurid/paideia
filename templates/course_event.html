@@ -280,6 +280,11 @@
       </button>
     </form>
   {% endif %}
+  <form method="post" action="/api/course/event/{{ event.id }}/harvest">
+    <button class="bg-emerald-100 text-emerald-800 px-3 py-1.5 rounded text-xs hover:bg-emerald-200" title="из litops/вопросов/работ → кандидаты в корпус">
+      🌱 собрать кандидатов в корпус
+    </button>
+  </form>
   <a href="/discuss/new?course_id={{ course.id }}"
      class="bg-stone-100 text-stone-700 px-3 py-1.5 rounded text-xs hover:bg-stone-200">
     ∇ Обсудить событие с Kaiyona
