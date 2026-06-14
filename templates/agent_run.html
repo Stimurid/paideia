@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block title %}Run {{ run.id }} — Paideia{% endblock %}
+{% block content %}
+
+{% include "_project_stepper.html" %}
+<div class="mb-4 flex items-center gap-3">
+  <a href="/project/{{ run.project_id }}/runs" class="text-stone-500 hover:text-stone-900 text-sm">← все runs</a>
+  <h1 class="text-lg font-bold font-mono">{{ run.id }}</h1>
+  {% set badge = {'pending':'bg-stone-100 text-stone-600','running':'bg-amber-100 text-amber-700','awaiting_approval':'bg-violet-100 text-violet-700','applied':'bg-emerald-100 text-emerald-700','cancelled':'bg-stone-100 text-stone-500','failed':'bg-rose-100 text-rose-700'}.get(run.status,'bg-stone-100') %}
+  <span class="pill {{ badge }}">{{ run.status }}</span>
+  <span class="ml-auto text-xs text-stone-400">{{ run.created_at }}</span>
+</div>
+
+<div class="bg-stone-100 border border-stone-200 rounded p-3 mb-4 text-sm flex items-center gap-3">
+  <span class="pill bg-violet-700 text-white">{{ run.profile }}</span>
+  <span class="text-stone-600">target: <code>{{ run.target_object_kind }}:{{ run.target_object_id }}</code></span>
+  {% if run.space_id %}<span class="text-stone-600">space: {{ run.space_id }}</span>{% endif %}
+  <span class="text-stone-600">policy: {{ run.policy }}</span>
+</div>
+
+{% if run.goal %}
+<div class="bg-white border border-stone-200 rounded p-3 mb-4 text-sm">
+  <strong>Goal:</strong> {{ run.goal }}
+</div>
+{% endif %}
+
+<div class="grid grid-cols-12 gap-4">
+  <!-- Левая колонка: операции (preview/apply) -->
+  <div class="col-span-8">
+    <h2 class="font-bold mb-2">Proposed operations ({{ run.artifacts | length }})</h2>
+
+    {% if run.status == 'awaiting_approval' and run.artifacts %}
+      <form method="post" action="/api/agent-run/{{ run.id }}/apply" id="apply-form">
+        <div class="mb-3 flex gap-2 text-xs">
+          <button type="button" onclick="checkAllOps(true)" class="bg-white border border-stone-300 px-3 py-1 rounded">выбрать всё</button>
+          <button type="button" onclick="checkAllOps(false)" class="bg-white border border-stone-300 px-3 py-1 rounded">снять</button>
+          <button type="submit" class="ml-auto bg-emerald-700 text-white px-4 py-1 rounded">✓ применить отмеченные</button>
+          <a href="/api/agent-run/{{ run.id }}/cancel" class="bg-rose-100 text-rose-700 px-3 py-1 rounded">отменить весь run</a>
+        </div>
+
+        <ul class="space-y-2">
+          {% for op in run.artifacts %}
+            <li class="bg-white border border-stone-200 rounded p-3">
+              <label class="flex items-start gap-3 cursor-pointer">
+                <input type="checkbox" name="approved_op_ids" value="{{ op.op_id }}" class="op-cb mt-1" checked>
+                <div class="flex-1 text-sm">
+                  <div class="flex items-center gap-2 mb-1">
+                    <span class="pill bg-stone-100 text-stone-700">{{ op.agent_id }}</span>
+                    <span class="pill bg-violet-100 text-violet-700">{{ op.op_kind }}</span>
+                    <span class="text-xs text-stone-400">→ {{ op.target_kind }}:{{ op.target_id }}</span>
+                    {% if op.confidence != 'medium' %}<span class="text-xs text-stone-500">confidence: {{ op.confidence }}</span>{% endif %}
+                  </div>
+                  {% if op.rationale %}<div class="text-xs text-stone-600 mb-2">{{ op.rationale }}</div>{% endif %}
+                  <details class="text-xs">
+                    <summary class="cursor-pointer text-stone-500">payload</summary>
+                    <pre class="bg-stone-50 p-2 rounded mt-1 overflow-x-auto">{{ op.payload | tojson(indent=2) }}</pre>
+                  </details>
+                </div>
+              </label>
+            </li>
+          {% endfor %}
+        </ul>
+      </form>
+      <script>
+        function checkAllOps(checked) {
+          document.querySelectorAll('.op-cb').forEach(cb => cb.checked = checked);
+        }
+      </script>
+    {% elif run.status in ['applied'] and run.artifacts %}
+      <ul class="space-y-2">
+        {% for op in run.artifacts %}
+          {% set dec = op.decision or 'pending' %}
+          <li class="bg-white border border-stone-200 rounded p-3 text-sm">
+            <div class="flex items-center gap-2">
+              <span class="pill {% if dec == 'approved' %}bg-emerald-100 text-emerald-700{% elif dec == 'rejected' %}bg-stone-200 text-stone-500{% else %}bg-rose-100 text-rose-700{% endif %}">{{ dec }}</span>
+              <span class="pill bg-stone-100 text-stone-700">{{ op.agent_id }}</span>
+              <span class="pill bg-violet-100 text-violet-700">{{ op.op_kind }}</span>
+              <span class="text-xs text-stone-400">→ {{ op.target_kind }}:{{ op.target_id }}</span>
+            </div>
+            {% if op.rationale %}<div class="text-xs text-stone-600 mt-1">{{ op.rationale }}</div>{% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    {% elif run.status == 'pending' %}
+      <div class="bg-amber-50 border border-amber-200 rounded p-4 text-sm">
+        Run создан, ожидает запуска.
+        <form method="post" action="/api/agent-run/{{ run.id }}/execute" class="mt-3">
+          <button class="bg-stone-900 text-stone-100 px-4 py-2 rounded text-sm">▶ запустить агентов</button>
+        </form>
+      </div>
+    {% elif run.status == 'running' %}
+      <div class="bg-amber-50 border border-amber-200 rounded p-4 text-sm">
+        ⏳ агенты работают...
+        <p class="text-xs text-stone-500 mt-2">обнови страницу через 30-60 с</p>
+      </div>
+    {% else %}
+      <div class="bg-stone-50 border border-stone-200 rounded p-4 text-sm text-stone-500">
+        {{ run.status }} · нет операций для отображения
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Правая колонка: trace + meta -->
+  <aside class="col-span-4 space-y-3">
+    <div class="bg-white border border-stone-200 rounded p-3 text-sm">
+      <div class="text-xs uppercase tracking-wide text-stone-500 font-semibold mb-2">trace</div>
+      {% if run.trace %}
+        <ul class="text-xs space-y-1">
+          {% for step in run.trace %}
+            <li>
+              <span class="font-mono text-stone-400">{{ step.step }}.</span>
+              <strong>{{ step.agent_id }}</strong>
+              {% if step.status == 'ok' %}
+                <span class="text-emerald-600">✓</span>
+              {% else %}
+                <span class="text-rose-600">✗ {{ step.error or step.status }}</span>
+              {% endif %}
+              {% if step.duration_ms %}<span class="text-stone-400">{{ (step.duration_ms/1000)|round(1) }}s</span>{% endif %}
+              {% if step.ops_count is defined %}<span class="text-stone-400">· {{ step.ops_count }} ops</span>{% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}<p class="text-stone-400 italic text-xs">пусто</p>{% endif %}
+    </div>
+
+    <div class="bg-white border border-stone-200 rounded p-3 text-xs">
+      <div class="uppercase tracking-wide text-stone-500 font-semibold mb-2">budget</div>
+      <pre class="bg-stone-50 p-2 rounded">{{ run.budget | tojson(indent=2) }}</pre>
+    </div>
+  </aside>
+</div>
+
+{% endblock %}

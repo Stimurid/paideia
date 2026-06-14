@@ -1,0 +1,99 @@
+# L2 Spaces — ontological rooms.
+# Каждое Space активирует подмножество L1 агентов и применяет дефолтные gates.
+# Source: architecture/03_AGENT_LEVELS.md (FifthConstraint).
+
+spaces:
+  - id: pedagogical-engineering
+    name: Pedagogical Engineering Field
+    description: |
+      Default space. Работа с программой как с инженерной системой.
+      Фокус: function/flows/working_organ/transmission. Решение
+      противоречий через ТРИЗ.
+    active_agents:
+      - pedagogical-reconstructor
+      - pedagogical-contradiction-cutter
+      - methodological-grounder
+      - stabilizer
+      - quality-gate
+    default_gates:
+      - "не пропускать advance без verification"
+      - "block если нарушены sacred constraints"
+    focus_type: engineering
+    is_default: true
+
+  - id: curriculum-concept
+    name: Curriculum Concept Field
+    description: |
+      Поиск формы программы. Reformulation на ранней стадии. Когда
+      пользователь говорит «не знаю что хочу» или «нужны идеи».
+    active_agents:
+      - pedagogical-reconstructor
+      - frame-breaker
+      - pedagogical-contradiction-cutter
+      - ideal-tracer
+    default_gates:
+      - "минимум 2 альтернативы перед advance"
+    focus_type: concept
+    is_default: false
+
+  - id: educational-game
+    name: Educational Game Field
+    description: |
+      Нелинейные форматы: игры, симуляции, ОДИ, ритуалы. Активируется
+      когда программа похожа на «опыт», а не «курс».
+    active_agents:
+      - frame-breaker
+      - curriculum-chimerizer
+      - methodological-grounder
+      - selector
+    default_gates:
+      - "явная роль игрока"
+      - "явный кризис"
+      - "явная арка изменения"
+    focus_type: game
+    is_default: false
+
+  - id: stakeholder-pressure
+    name: Stakeholder Pressure Field
+    description: |
+      Обстрел программы от лица стейкхолдеров. Студенты, ректор, министр,
+      родители, бизнес-партнёры, юрист.
+    active_agents:
+      - quality-gate
+      - stabilizer
+      - pedagogical-contradiction-cutter
+    default_gates:
+      - "каждый stakeholder задаёт минимум 3 вопроса"
+      - "итоговый verdict по каждому"
+    focus_type: stakeholder
+    is_default: false
+
+  - id: counter-corpus
+    name: Counter-Corpus Field
+    description: |
+      Стресс-тест провалами корпуса. Reading, Sydney, Italian ChatGPT
+      ban, Gartner 40% cancellations, ANU detector off. Где наш проект
+      может сломаться как они?
+    active_agents:
+      - quality-gate
+      - stabilizer
+      - pedagogical-reconstructor
+    default_gates:
+      - "каждый counter-signal проверен против проекта"
+    focus_type: failure-mode
+    is_default: false
+
+  - id: document-output
+    name: Document Output Field
+    description: |
+      Сборка выходных документов: РПД, силлабус, заявка, бизнес-план.
+      Активирует jinja2-шаблоны + LLM-проверку соответствия нормам.
+    active_agents:
+      - quality-gate
+      - stabilizer
+      - methodological-grounder
+    default_gates:
+      - "соответствие ФГОС если применимо"
+      - "нет слоп-маркеров выше порога"
+    focus_type: output
+    is_default: false

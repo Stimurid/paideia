@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}{{ book.title }} — Paideia{% endblock %}
+{% block content %}
+
+<div class="mb-4 flex items-center gap-3">
+  <a href="/library" class="text-stone-500 hover:text-stone-900 text-sm">← библиотека</a>
+  <span class="text-stone-300">/</span>
+  <h1 class="text-xl font-bold">{{ book.title }}</h1>
+  {% set sc = {'uploading':'bg-stone-100','text_extracted':'bg-amber-100 text-amber-700','chunks_embedded':'bg-amber-100 text-amber-700','summary_ready':'bg-blue-100 text-blue-700','concepts_ready':'bg-emerald-100 text-emerald-700','ready':'bg-emerald-100 text-emerald-700','failed':'bg-rose-100 text-rose-700'}.get(book.status, 'bg-stone-100') %}
+  <span class="pill {{ sc }}">{{ book.status }}</span>
+</div>
+
+<div class="grid grid-cols-12 gap-6">
+  <!-- Основное содержимое -->
+  <div class="col-span-8">
+
+    <!-- Метаданные -->
+    <div class="bg-white border border-stone-200 rounded p-4 mb-4 text-sm">
+      {% if book.authors %}<div><strong>Авторы:</strong> {{ book.authors }}</div>{% endif %}
+      {% if book.year %}<div><strong>Год:</strong> {{ book.year }}</div>{% endif %}
+      <div><strong>Источник:</strong> {{ book.source_kind }}{% if book.source_url %} · <a href="{{ book.source_url }}" class="text-blue-600 hover:underline">{{ book.source_url }}</a>{% endif %}</div>
+      <div><strong>Загружено:</strong> {{ book.uploaded_at[:16] }}</div>
+    </div>
+
+    <!-- Summary -->
+    {% if book.summary %}
+    <section class="bg-white border border-stone-200 rounded p-5 mb-4">
+      <h2 class="font-bold mb-3">📝 Summary</h2>
+      <div class="prose prose-sm prose-stone max-w-none whitespace-pre-line">{{ book.summary }}</div>
+      {% if book.topics %}
+        <div class="mt-3 flex flex-wrap gap-2">
+          {% for t in book.topics %}<span class="pill bg-stone-100 text-stone-700">{{ t }}</span>{% endfor %}
+        </div>
+      {% endif %}
+    </section>
+    {% endif %}
+
+    <!-- Concepts -->
+    {% if book.concepts %}
+    <section class="bg-white border border-stone-200 rounded p-5 mb-4">
+      <div class="flex items-baseline justify-between mb-3">
+        <h2 class="font-bold">💡 Концепты <span class="text-stone-400 text-sm font-normal">{{ book.concepts | length }}</span></h2>
+        <span class="text-xs text-stone-500">отсортировано по важности</span>
+      </div>
+      <ul class="space-y-3">
+        {% for c in book.concepts %}
+          <li class="border-l-2 border-violet-300 pl-3">
+            <div class="flex items-center gap-2 mb-1">
+              <strong class="text-sm">{{ c.name }}</strong>
+              {% for _ in range(c.importance or 3) %}<span class="text-amber-400">★</span>{% endfor %}
+            </div>
+            {% if c.definition %}<div class="text-sm text-stone-700">{{ c.definition }}</div>{% endif %}
+            {% if c.quote %}<div class="text-xs text-stone-600 italic mt-1 bg-stone-50 p-2 rounded">«{{ c.quote }}»</div>{% endif %}
+            {% if c.links %}
+              <div class="mt-1 text-xs text-stone-500">
+                связи:
+                {% for l in c.links %}
+                  <a href="/{{ l.kind }}/{{ l.id }}" class="hover:underline">{{ l.kind }}:{{ l.id }}</a>{% if not loop.last %},{% endif %}
+                {% endfor %}
+              </div>
+            {% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    </section>
+    {% elif book.status == 'summary_ready' %}
+    <section class="bg-amber-50 border border-amber-200 rounded p-4 mb-4 text-sm">
+      💡 Концепты ещё не извлечены.
+      <form method="post" action="/api/library/{{ book.id }}/extract-concepts" class="inline">
+        <button class="ml-2 text-violet-700 underline hover:text-violet-900">запустить extraction</button>
+      </form>
+    </section>
+    {% endif %}
+
+    {% if book.status == 'failed' and book.error %}
+    <section class="bg-rose-50 border border-rose-200 rounded p-4 text-sm text-rose-700">
+      <strong>Ошибка:</strong> {{ book.error }}
+    </section>
+    {% endif %}
+  </div>
+
+  <!-- Sidebar: sections + actions -->
+  <aside class="col-span-4 space-y-3">
+    <div class="bg-white border border-stone-200 rounded p-4 text-sm">
+      <div class="text-xs uppercase text-stone-500 font-semibold mb-2">структура</div>
+      {% if book.sections %}
+        <ul class="space-y-1 max-h-96 overflow-y-auto">
+          {% for s in book.sections %}
+            <li class="flex items-baseline gap-2 text-xs">
+              <span class="font-mono text-stone-400 w-6">{{ s.section_num }}</span>
+              <span class="flex-1">{{ s.title or "(без заголовка)" }}</span>
+              <span class="text-stone-400">{{ s.chunk_count }}</span>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}<p class="text-stone-400 italic">секций нет</p>{% endif %}
+    </div>
+
+    <div class="bg-stone-50 border border-stone-200 rounded p-3 text-xs space-y-2">
+      <div class="font-semibold text-stone-600 uppercase tracking-wide mb-2">статистика</div>
+      <div>📦 {{ book.chunk_count }} chunks</div>
+      <div>📑 {{ book.sections | length }} секций</div>
+      <div>💡 {{ book.concepts | length }} концептов</div>
+      {% if book.page_count %}<div>📄 ~{{ book.page_count }} страниц</div>{% endif %}
+    </div>
+  </aside>
+</div>
+{% endblock %}

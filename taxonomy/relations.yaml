@@ -1,0 +1,44 @@
+# Типы связей в эмпирическом графе (evidence_links).
+# Кейс может ссылаться на тип, гипотезу, противоречие, моду, контр-сигнал.
+
+relations:
+  instantiates:
+    label: инстанциирует
+    hint: |
+      Кейс является примером архитектурного типа (A–F) или конкретной формы паттерна.
+      Применяется обычно к связи Case → Type.
+    typical_targets: [type]
+
+  supports:
+    label: поддерживает
+    hint: |
+      Кейс — независимое наблюдение, подтверждающее гипотезу/моду.
+      Применяется к Case → Hypothesis / Mode.
+    typical_targets: [hypothesis, mode]
+
+  weakens:
+    label: ослабляет
+    hint: |
+      Кейс показывает контр-движение, не обнуляющее гипотезу полностью,
+      но снижающее её универсальность. Также применимо к Case → Tension
+      (показывает разрешение или снятие противоречия в конкретной ситуации).
+    typical_targets: [hypothesis, tension, mode]
+
+  contradicts:
+    label: опровергает
+    hint: |
+      Прямое опровержение: кейс ведёт себя обратно тому, что предсказывает
+      гипотеза/мода. Применяется к Case → Hypothesis / Counter-signal.
+    typical_targets: [hypothesis, mode]
+
+  illustrates:
+    label: иллюстрирует
+    hint: |
+      Кейс — наглядный пример противоречия или моды (не доказательство,
+      а иллюстрация). Применяется к Case → Tension / Mode.
+    typical_targets: [tension, mode]
+
+confidence_levels:
+  - low
+  - medium
+  - high

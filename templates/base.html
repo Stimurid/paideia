@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#1c1917">
+  <title>{% block title %}Paideia{% endblock %}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 500; }
+    .pill-A { background: #fee2e2; color: #991b1b; }
+    .pill-B { background: #fef3c7; color: #92400e; }
+    .pill-C { background: #ddd6fe; color: #5b21b6; }
+    .pill-D { background: #d1fae5; color: #065f46; }
+    .pill-E { background: #cffafe; color: #155e75; }
+    .pill-F { background: #e0e7ff; color: #3730a3; }
+    .pill-gray { background: #e5e7eb; color: #374151; }
+
+    /* dropdown (desktop) — :hover */
+    .nav-dropdown { position: relative; }
+    .nav-dropdown-menu {
+      position: absolute; top: 100%; left: 0;
+      background: #1c1917; min-width: 220px;
+      border-radius: 6px; padding: 8px 0;
+      box-shadow: 0 8px 24px rgba(0,0,0,.4);
+      opacity: 0; visibility: hidden; transform: translateY(-4px);
+      transition: opacity .15s, visibility .15s, transform .15s;
+      z-index: 50;
+    }
+    .nav-dropdown:hover .nav-dropdown-menu,
+    .nav-dropdown:focus-within .nav-dropdown-menu {
+      opacity: 1; visibility: visible; transform: translateY(0);
+    }
+    .nav-dropdown-menu a {
+      display: block; padding: 6px 16px; color: #d6d3d1; font-size: 14px;
+    }
+    .nav-dropdown-menu a:hover { background: #292524; color: #fcd34d; }
+    .nav-dropdown-menu .menu-sep { height: 1px; background: #44403c; margin: 6px 0; }
+    .nav-dropdown-menu .menu-label {
+      padding: 4px 16px; font-size: 10px; color: #a8a29e;
+      text-transform: uppercase; letter-spacing: .05em;
+    }
+
+    /* mobile drawer (F8) */
+    #mobile-drawer { transition: transform .25s ease; }
+    #mobile-drawer.closed { transform: translateX(-100%); }
+    #mobile-drawer a, #mobile-drawer button {
+      display: block; padding: 10px 16px; color: #d6d3d1;
+      font-size: 15px; border-radius: 6px;
+    }
+    #mobile-drawer a:active, #mobile-drawer button:active { background: #292524; }
+
+    /* token counter pill */
+    #token-pill {
+      cursor: pointer; transition: background .15s;
+    }
+    #token-pill:hover { background: #44403c; }
+
+    /* mobile fixes */
+    @media (max-width: 768px) {
+      main { padding: 12px !important; }
+      h1 { font-size: 1.4rem !important; }
+      input[type=text], input[type=email], input[type=number], textarea, select {
+        font-size: 16px !important;  /* prevent iOS zoom on focus */
+      }
+    }
+  </style>
+</head>
+<body class="bg-stone-50 text-stone-900">
+<nav class="bg-stone-900 text-stone-100 px-4 md:px-6 py-3 flex items-center gap-3 md:gap-5 sticky top-0 z-30">
+  <!-- mobile hamburger -->
+  <button onclick="toggleDrawer()" class="md:hidden text-stone-100 text-xl" aria-label="меню">☰</button>
+
+  <a href="/" class="font-bold tracking-wide">Paideia</a>
+
+  <!-- Корпус — dropdown (desktop only) -->
+  <div class="nav-dropdown hidden md:block">
+    <button class="hover:text-amber-300 cursor-pointer">Корпус ▾</button>
+    <div class="nav-dropdown-menu">
+      <div class="menu-label">просмотр</div>
+      <a href="/catalog">📋 Каталог · 118 кейсов</a>
+      <a href="/map">🗺 Карта корпуса</a>
+      <a href="/match">🎯 Подбор аналогов</a>
+      <div class="menu-sep"></div>
+      <div class="menu-label">теория</div>
+      <a href="/theory">📚 Типы / гипотезы / противоречия</a>
+      <a href="/methods">⚡ 40 ТРИЗ-приёмов</a>
+      <div class="menu-sep"></div>
+      <div class="menu-label">пополнение</div>
+      <a href="/import">📥 Импорт (URL / файл)</a>
+      <a href="/waves">📡 Мониторинг волн</a>
+      <a href="/archive">📦 Архив (RAG)</a>
+      <a href="/library">📚 Моя библиотека</a>
+    </div>
+  </div>
+
+  <a href="/projects" class="hover:text-amber-300 hidden md:inline">Мои проекты</a>
+  <a href="/courses" class="hover:text-amber-300 hidden md:inline">Курсы</a>
+  <a href="/discuss" class="hover:text-amber-300 hidden md:inline" title="∇ дискуссия с Kaiyona">∇</a>
+  <a href="/project/new/wizard" class="hover:text-amber-300 bg-violet-700 px-3 py-1 rounded text-sm hidden md:inline">+ новый</a>
+
+  <span class="ml-auto flex items-center gap-2 md:gap-3">
+    <!-- F-token: live token + cost counter -->
+    <span id="token-pill" onclick="toggleTokenDetails()"
+          class="text-xs px-2 py-1 border border-stone-600 rounded text-stone-300 hidden sm:inline"
+          title="Токены и стоимость в текущей сессии (цена × 2 от себестоимости)">
+      <span id="token-count">…</span> · <span id="token-cost">$0.000</span>
+    </span>
+    <span class="text-stone-400 text-xs hidden xl:inline">118 кейсов · 6 типов</span>
+    <button onclick="openCmdk()" class="text-xs px-2 py-1 border border-stone-600 rounded hover:text-amber-300 flex items-center gap-1" title="Cmd+K">
+      🔍 <span class="hidden md:inline">Cmd+K</span>
+    </button>
+    <a href="/support" class="hover:text-amber-300 text-xs px-2 py-1 border border-stone-600 rounded hidden sm:inline" title="Поддержать проект">💛</a>
+    <a href="/service" class="hover:text-amber-300 text-xs px-2 py-1 border border-stone-600 rounded" title="Сервисный режим">⚙️</a>
+  </span>
+</nav>
+
+<!-- Mobile drawer (F8) -->
+<div id="mobile-drawer" class="closed fixed top-0 left-0 h-full w-72 bg-stone-900 text-stone-100 z-40 shadow-2xl overflow-y-auto md:hidden">
+  <div class="px-4 py-3 flex items-center justify-between border-b border-stone-700">
+    <span class="font-bold">Paideia</span>
+    <button onclick="toggleDrawer()" class="text-2xl">×</button>
+  </div>
+  <div class="py-2">
+    <div class="px-4 py-2 text-xs uppercase text-stone-500">Корпус</div>
+    <a href="/catalog">📋 Каталог · 118 кейсов</a>
+    <a href="/map">🗺 Карта корпуса</a>
+    <a href="/match">🎯 Подбор аналогов</a>
+    <a href="/theory">📚 Теория</a>
+    <a href="/methods">⚡ ТРИЗ-приёмы</a>
+    <a href="/library">📖 Библиотека</a>
+    <div class="px-4 py-2 text-xs uppercase text-stone-500 mt-3">Моё</div>
+    <a href="/projects">📁 Мои проекты</a>
+    <a href="/courses">🎓 Курсы</a>
+    <a href="/discuss">∇ Дискуссия с Kaiyona</a>
+    <a href="/project/new/wizard" class="!bg-violet-700 mx-3 !text-white text-center">+ новый проект</a>
+    <div class="px-4 py-2 text-xs uppercase text-stone-500 mt-3">Сервис</div>
+    <a href="/onboarding">🚪 Сменить роль</a>
+    <a href="/support">💛 Поддержать</a>
+    <a href="/service">⚙️ Сервисный режим</a>
+    <a href="/llm-runs">📊 Аудит LLM</a>
+  </div>
+</div>
+
+<!-- Token-details popover -->
+<div id="token-details" class="hidden fixed top-14 right-4 bg-white border border-stone-300 rounded-lg shadow-xl p-4 z-40 max-w-sm text-sm">
+  <div class="font-bold mb-2">💸 Стоимость сессии</div>
+  <div class="text-xs text-stone-600 mb-3">
+    Цена показана с множителем ×2 от себестоимости LLM
+    (для покрытия inference / хостинга). Лимиты:
+    fast 30 / deep 5 / search 3 в день.
+    <a href="/support" class="text-violet-700 hover:underline">Поддержать</a> — лимиты снимаются.
+  </div>
+  <div id="token-details-body" class="space-y-1"></div>
+  <div class="mt-3 pt-3 border-t border-stone-200 text-xs text-stone-500">
+    Дневной бюджет платформы:
+    <span id="budget-spent">…</span> / <span id="budget-cap">…</span>
+  </div>
+</div>
+
+<main class="max-w-7xl mx-auto p-3 md:p-6">
+{% block content %}{% endblock %}
+</main>
+
+<!-- Mobile FAB концьерж (F8) -->
+<a href="/" class="md:hidden fixed bottom-5 right-5 bg-violet-700 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-2xl text-2xl z-30" aria-label="спросить">🔍</a>
+
+<!-- Feedback widget — floating button + panel -->
+<button onclick="toggleFeedback()" id="fb-launcher"
+        class="fixed bottom-5 left-5 bg-amber-500 text-white rounded-full w-12 h-12 flex items-center justify-center shadow-xl text-xl z-30 hover:bg-amber-600"
+        title="идея / критика / баг — Тимуру">💬</button>
+
+<div id="fb-panel" class="hidden fixed bottom-20 left-5 bg-white border border-stone-300 rounded-xl shadow-2xl z-40 w-80 md:w-96 max-h-[80vh] overflow-hidden flex flex-col">
+  <div class="bg-amber-500 text-white px-4 py-2 flex items-center justify-between">
+    <span class="font-bold text-sm">💬 Идея / критика Paideia</span>
+    <button onclick="toggleFeedback()" class="text-xl leading-none">×</button>
+  </div>
+  <div class="px-4 py-2 text-xs text-stone-500 border-b border-stone-200">
+    Acceptor прочитает и переспросит если непонятно. Сохраню — увижу.
+  </div>
+  <div id="fb-log" class="flex-1 overflow-y-auto px-4 py-3 space-y-2 text-sm" style="min-height: 120px; max-height: 50vh;">
+    <div class="text-stone-400 text-xs italic">Что улучшить? Что бесит? Что не работает?</div>
+  </div>
+  <form id="fb-form" class="border-t border-stone-200 p-2 flex gap-2">
+    <textarea id="fb-input" rows="2" placeholder="опиши..."
+              class="flex-1 border border-stone-300 rounded px-2 py-1 text-sm resize-none focus:outline-none focus:border-amber-400"></textarea>
+    <button type="submit" id="fb-send"
+            class="bg-amber-500 text-white px-3 rounded text-sm font-semibold hover:bg-amber-600">➤</button>
+  </form>
+</div>
+
+{% include "_cmdk.html" %}
+
+<script>
+function toggleDrawer() {
+  const d = document.getElementById('mobile-drawer');
+  d.classList.toggle('closed');
+}
+function toggleTokenDetails() {
+  document.getElementById('token-details').classList.toggle('hidden');
+}
+
+async function refreshTokens() {
+  try {
+    const r = await fetch('/api/session/stats', {cache: 'no-store'});
+    if (!r.ok) return;
+    const d = await r.json();
+    document.getElementById('token-count').textContent = d.tokens_total >= 1000
+      ? (d.tokens_total/1000).toFixed(1) + 'k tok'
+      : d.tokens_total + ' tok';
+    document.getElementById('token-cost').textContent = '$' + d.cost_usd_display.toFixed(4);
+    const body = document.getElementById('token-details-body');
+    if (d.calls === 0) {
+      body.innerHTML = '<div class="text-stone-500 italic">пока без LLM-вызовов</div>';
+    } else {
+      body.innerHTML = `<div><strong>${d.calls}</strong> вызовов / <strong>${d.tokens_total}</strong> токенов</div>` +
+        d.by_model.map(m =>
+          `<div class="flex justify-between text-xs"><span>${m.model || '?'}</span><span>${m.calls}× / $${m.cost.toFixed(4)}</span></div>`
+        ).join('');
+    }
+    if (d.budget) {
+      document.getElementById('budget-spent').textContent = '$' + d.budget.spent_usd.toFixed(2);
+      document.getElementById('budget-cap').textContent = '$' + d.budget.cap_usd.toFixed(0);
+    }
+  } catch (e) {}
+}
+refreshTokens();
+setInterval(refreshTokens, 20000);
+
+// === Feedback widget ===
+let fbThreadId = null;
+
+function toggleFeedback() {
+  document.getElementById('fb-panel').classList.toggle('hidden');
+}
+
+function fbAppend(sender, text) {
+  const log = document.getElementById('fb-log');
+  const div = document.createElement('div');
+  if (sender === 'user') {
+    div.className = 'bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 self-end ml-8';
+  } else if (sender === 'llm') {
+    div.className = 'bg-stone-100 rounded-lg px-3 py-2 mr-8';
+  } else {
+    div.className = 'text-xs text-stone-500 italic text-center';
+  }
+  div.textContent = text;
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+}
+
+document.getElementById('fb-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const input = document.getElementById('fb-input');
+  const text = input.value.trim();
+  if (!text) return;
+  fbAppend('user', text);
+  input.value = '';
+  const send = document.getElementById('fb-send');
+  send.disabled = true; send.textContent = '…';
+  try {
+    let r;
+    if (fbThreadId) {
+      r = await fetch(`/api/feedback/${fbThreadId}/reply`, {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({text}),
+      });
+    } else {
+      r = await fetch('/api/feedback/start', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          text, page_path: location.pathname,
+          page_context: document.title,
+        }),
+      });
+    }
+    if (r.status === 429) { fbAppend('system', '⚠ лимит исчерпан, попробуй ввести код на /support'); return; }
+    if (!r.ok) { fbAppend('system', '⚠ ошибка: ' + (await r.text()).slice(0,100)); return; }
+    const d = await r.json();
+    fbThreadId = d.thread_id;
+    if (d.status === 'saved') {
+      fbAppend('llm', d.llm_message);
+      fbAppend('system', `сохранено · ${d.category} / severity:${d.severity}` + (d.tags?.length ? ` · ${d.tags.join(', ')}` : ''));
+      fbThreadId = null; // следующее сообщение откроет новый тред
+    } else if (d.status === 'clarifying') {
+      fbAppend('llm', d.llm_message);
+    }
+    if (window.refreshTokens) setTimeout(refreshTokens, 500);
+  } catch (err) {
+    fbAppend('system', '⚠ ошибка: ' + err.message);
+  } finally {
+    send.disabled = false; send.textContent = '➤';
+  }
+});
+
+// Ctrl+Enter в textarea = submit
+document.getElementById('fb-input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+    e.preventDefault();
+    document.getElementById('fb-form').requestSubmit();
+  }
+});
+</script>
+</body>
+</html>

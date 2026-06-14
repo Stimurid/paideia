@@ -1,0 +1,11 @@
+{
+  "content": "```json\n{\n  \"id\": \"system_demo-electives\",\n  \"project_id\": \"demo-electives\",\n  \"title\": \"ТюмГУ · элективы 2026\",\n  \"kind\": \"\",\n  \"function\": \"\",\n  \"secondary_functions\": [],\n  \"working_organ\": [],\n  \"flows\": [],\n  \"controls\": [],\n  \"transmission\": [],\n  \"dano\": {\n    \"student_arrives_with\": \"\",\n    \"institution_has\": \"\",\n    \"context\": \"Сборка пилота элективов с AI-тьютором и медиатором на одной кафедре ТюмГУ, 1 курс магистратуры по педдизайну, осенний семестр 2026.\",\n    \"resources\": \"\",\n    \"constraints\": \"\",\n    \"available_technologies\": \"\",\n    \"current_practice\": \"\"\n  },\n  \"dolzhno\": {\n    \"student_can_do\": \"\",\n    \"measured_via\": \"\",\n    \"market_demand\": \"\",\n    \"success_criteria\": \"\",\n    \"protected_constraints\": \"\",\n    \"verification_conditions\": \"\"\n  },\n  \"contradictions\": [],\n  \"mutations\": [],\n  \"verification\": [],\n  \"evolution_pressure\": [],\n  \"adjacent_systems\": [],\n  \"constraint_envelope\": {\n    \"preserved\": [],\n    \"sacred\": [],\n    \"hidden\": [],\n    \"violated\": [],\n    \"suspended\": [],\n    \"redefined\": [],\n    \"invention_level\": 1,\n    \"stabilization_risk\": 0,\n    \"adjacent_system_impact\": []\n  },\n  \"maturity\": \"seed\",\n  \"source\": \"imported-from-canvas\",\n  \"notes\": null,\n  \"tags\": []\n}\n```",
+  "usage": {
+    "prompt_tokens": 1328,
+    "completion_tokens": 370,
+    "total_tokens": 1698,
+    "cached": false,
+    "provider": "302.ai",
+    "model": "gpt-4.1-mini"
+  }
+}

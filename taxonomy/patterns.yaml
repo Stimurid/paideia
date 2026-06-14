@@ -1,0 +1,104 @@
+# Архитектурные типы A–F, выведенные в Wave 2 (глубинная структурная фильтрация).
+# Каждый кейс instantiates один (иногда два) тип.
+
+types:
+  A:
+    id: A
+    name: governed AI access
+    full_name: governed GenAI portal / sandbox / playground
+    description: |
+      Университетские/корпоративные внутренние порталы и песочницы для доступа
+      к коммерческим LLM с SSO, логированием, библиотекой промптов, политиками
+      данных. Не отдельный продукт, а инфраструктура.
+    markers:
+      - SSO + private instance
+      - usage analytics / dashboards
+      - prompt library
+      - data governance / FERPA/HIPAA compliance
+    examples_seed:
+      - stanford-ai-playground
+      - harvard-ai-sandbox
+      - washu-secure-chatgpt
+
+  B:
+    id: B
+    name: no-code builder / LMS-native agents
+    full_name: course-bot builder + LMS-встроенные микророли
+    description: |
+      Платформа, позволяющая преподавателю собирать собственного чатбота под
+      курс (загрузка материалов, правила поведения), или LMS-встроенные
+      агенты (summaries, rubric gen, grading assistance).
+    markers:
+      - no-code builder
+      - per-course / per-faculty bots
+      - встроено в Canvas/Blackboard/LMS
+    examples_seed:
+      - asu-createai
+      - ut-sage
+      - instructure-igniteai
+      - umich-maizey
+
+  C:
+    id: C
+    name: pedagogy-shaped dialogue
+    full_name: педагогически формализованный режим диалога
+    description: |
+      Не автономия, а регламентированная форма диалога (Socratic / learning mode /
+      role-play activity), встраивающая AI как роль без полной автоматизации.
+    markers:
+      - Socratic mode
+      - graded dialogue activity
+      - role/persona fixed by instructor
+      - reflection step
+    examples_seed:
+      - claude-for-education-learning-mode
+      - blackboard-ai-conversation
+      - ut-sage
+
+  D:
+    id: D
+    name: governance + training ecosystems
+    full_name: governance unit + AI ambassadors + competency centre
+    description: |
+      Зрелые внедрения, где AI идёт в комплекте с centres of competence,
+      ambassadors, training programs, явным governance-контуром.
+    markers:
+      - AI Competency Centre
+      - ambassadors network
+      - training programs for staff/faculty
+      - explicit governance unit
+    examples_seed:
+      - oxford-chatgpt-edu
+      - utah-chatgpt-edu
+
+  E:
+    id: E
+    name: domain-secure workforce studios
+    full_name: privately-managed GenAI studio для чувствительных данных
+    description: |
+      Корпоративные / квази-корпоративные среды (медицина, крупные организации):
+      private Azure OpenAI или аналог, prompt-a-thon формат, измеримые метрики
+      (заявки/токены/cost), управляемая нагрузка.
+    markers:
+      - private Azure OpenAI / equivalent
+      - HIPAA / sensitive data
+      - prompt-a-thon / mentor program
+      - measurable application funnel
+    examples_seed:
+      - nyu-langone-genai-studio
+
+  F:
+    id: F
+    name: national AI learning infrastructures
+    full_name: национальные программы внедрения AI в образование
+    description: |
+      Государственные/региональные инициативы: AI-учебники, национальные
+      платформы, координационные органы. Масштаб — страна или регион.
+    markers:
+      - national policy / ministry-led
+      - cross-institutional rollout
+      - regulatory dimension
+    examples_seed:
+      - korea-ai-digital-textbooks
+      - uae-mbzuai
+      - surf-edugenai

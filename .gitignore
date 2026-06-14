@@ -1,0 +1,41 @@
+# Secrets
+.env
+.env.local
+*.secret
+
+# Virtualenv
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# SQLite
+db/paideia.db
+db/paideia.db-shm
+db/paideia.db-wal
+db/_extract_cache_*.json
+db/foundry_candidates.json
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+
+# Logs
+*.log
+.pytest_cache/
+
+# Local stages / scratch
+_books_stage/
+_books_stage2/
+content/library/book-*/
+content/archive/
+
+# Tarballs
+*.tar.gz
+
+# Frontmatter caches
+.frontmatter-cache/

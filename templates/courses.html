@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Курсы — Paideia{% endblock %}
+{% block content %}
+
+<div class="flex items-baseline justify-between mb-4">
+  <div>
+    <h1 class="text-2xl font-bold">🎓 Курсы</h1>
+    <p class="text-stone-500 text-sm mt-1">
+      Курс — первоклассная сущность с лентой событий (лекция / семинар / д/з / чат).
+      В отличие от <a href="/library" class="text-violet-700 hover:underline">библиотеки</a>,
+      материалы курса — не канон, а эмпирика: что было предъявлено аудитории, что вышло в обсуждение.
+    </p>
+  </div>
+  <a href="/course/new" class="bg-violet-700 text-white px-4 py-2 rounded text-sm hover:bg-violet-600">+ новый курс</a>
+</div>
+
+{% if active_course %}
+  <div class="bg-emerald-50 border border-emerald-200 rounded p-3 mb-4 text-sm flex items-center justify-between">
+    <span>Активный курс: <a href="/course/{{ active_course }}" class="font-semibold underline">{{ active_course }}</a></span>
+    <form method="post" action="/api/course/deactivate" class="inline">
+      <button class="text-rose-700 hover:underline text-xs">отключить</button>
+    </form>
+  </div>
+{% endif %}
+
+{% if courses %}
+  <ul class="space-y-3">
+    {% for c in courses %}
+      <li class="bg-white border border-stone-200 rounded-lg p-4 hover:shadow flex items-start gap-3">
+        <span class="text-2xl">🎓</span>
+        <div class="flex-1">
+          <a href="/course/{{ c.id }}" class="font-bold hover:underline">{{ c.name }}</a>
+          {% if c.description %}<p class="text-sm text-stone-600 mt-1">{{ c.description[:300] }}</p>{% endif %}
+          <div class="text-xs text-stone-400 mt-2">
+            {% if c.authors %}👤 {{ c.authors }} · {% endif %}
+            {% if c.period_start %}📅 {{ c.period_start }}{% if c.period_end %} – {{ c.period_end }}{% endif %} · {% endif %}
+            📦 {{ c.events_count }} событий · обновлено {{ c.updated_at[:16] }}
+          </div>
+        </div>
+        {% if c.id == active_course %}
+          <span class="pill bg-emerald-100 text-emerald-700">активный</span>
+        {% else %}
+          <form method="post" action="/api/course/{{ c.id }}/activate">
+            <button class="text-xs text-violet-700 hover:underline">сделать активным</button>
+          </form>
+        {% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+{% else %}
+  <div class="bg-violet-50 border border-violet-200 rounded-lg p-8 text-center">
+    <div class="text-5xl mb-3">🎓</div>
+    <h2 class="text-xl font-bold mb-2">Курсов пока нет</h2>
+    <p class="text-stone-600 mb-5 max-w-lg mx-auto">
+      Курс — это последовательность событий: лекции, семинары, домашки, чат-обсуждения.
+      Транскрипты и материалы кладутся в события, потом разбираются на вопросы аудитории
+      и предъявленные модели (litops-логика, F3 фаза G3 — пока ручной ввод).
+    </p>
+    <a href="/course/new" class="inline-block bg-violet-700 text-white px-6 py-3 rounded font-semibold hover:bg-violet-600">
+      + первый курс
+    </a>
+  </div>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,52 @@
+# Подсказки для AgentRun profiles. Используются на стейпере/модалке "▶ запустить".
+
+profiles:
+  default:
+    title: "Default"
+    hint: "Прогон через 4 базовых L1-агента: surface ассумпций, поиск противоречий, методическая привязка, quality-gate. Самый быстрый аудит."
+    example: "Хорошо как первая итерация после заполнения канваса."
+
+  kosmos:
+    title: "KOSMOS — 6 альтернатив"
+    hint: "Автономная генерация 6 вариантов программы через 6 стратегий: invert / split / mutate / merge / idealize / outcome-invert."
+    example: "Запускай когда чувствуешь что застрял в одной форме и нужен resh alternatives."
+
+  stakeholder_pressure:
+    title: "Stakeholder Pressure"
+    hint: "Обстрел 7 стейкхолдерами (студент-скептик, ректор, ФГОС-эксперт, работодатель, юрист, родитель, выпускник). По 5 вопросов от каждой позиции."
+    example: "Перед защитой проекта или согласованием с руководством."
+
+  semester_sim:
+    title: "Semester Simulator"
+    hint: "Прогон по неделям 1-16: что планируется, что реально произойдёт, какие сигналы получит преподаватель, drop-out, восстановление."
+    example: "Чтобы найти слабые недели до запуска."
+
+  anti_washing:
+    title: "Anti-Agent-Washing"
+    hint: "Скоринг заявленной vs фактической агентности по 6 критериям (autonomy / persistent state / multi-step / audit trail / goal-orientation / tool use)."
+    example: "Если ты заявил agentivity 3+, проверь честно ли это."
+
+  time_machine:
+    title: "Time Machine — 5 лет"
+    hint: "Перенос проекта в 2031: что устарело, что mainstream, что осталось ценным, какие риски реализовались."
+    example: "Для проверки страт-долговечности и обнаружения скрытой моды."
+
+  genealogy:
+    title: "Genealogy — родители/дети"
+    hint: "Граф эволюции: из каких кейсов корпуса проект мог произойти, в каких может развиться."
+    example: "Чтобы найти аналогов и понять траекторию."
+
+  counter_corpus:
+    title: "Counter-corpus — обстрел провалами"
+    hint: "Применяет 6 контр-сигналов корпуса (Reading, Sydney, Italian ChatGPT ban, Gartner, ANU, blue books) к проекту."
+    example: "Если проект слишком гладкий — найти где он сломается так же."
+
+  hypothesis_forge:
+    title: "Hypothesis Forge — H6+"
+    hint: "Сформулировать новую гипотезу из проекта, найти supports/contradicts в корпусе, предложить status."
+    example: "Когда проект чувствуешь как pattern, который заслуживает теории."
+
+  export_rpd:
+    title: "Export РПД"
+    hint: "Сборка Рабочей программы дисциплины с привязкой к ФГОС-компетенциям (УК/ОПК/ПК)."
+    example: "Финальный артефакт для методического управления."

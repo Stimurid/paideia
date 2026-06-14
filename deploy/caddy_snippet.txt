@@ -1,0 +1,27 @@
+# Добавить в /opt/moderbober/Caddyfile отдельным блоком
+
+paideia.mindkampf.ru {
+    # basic_auth — генерация bcrypt:
+    #   docker exec moderbober-caddy caddy hash-password --plaintext '<пароль>'
+    basic_auth {
+        timur <BCRYPT_HASH_HERE>
+    }
+
+    # Длинные таймауты для LLM (sonar-pro до 60с, gpt-5 до 180с, экспорт документов до 200с)
+    request_body {
+        max_size 50MB
+    }
+
+    reverse_proxy host.docker.internal:8082 {
+        transport http {
+            read_timeout 300s
+            write_timeout 300s
+            dial_timeout 10s
+        }
+    }
+}
+
+# После правки:
+#   cd /opt/moderbober && sudo docker compose restart caddy
+# или мягкий reload:
+#   docker exec moderbober-caddy caddy reload --config /etc/caddy/Caddyfile

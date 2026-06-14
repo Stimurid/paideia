@@ -1,0 +1,55 @@
+# Цены LLM-моделей в $ за 1M токенов (актуально на 2026-06).
+# Используется для расчёта cost_usd в llm_runs.
+# Если модели нет в этом списке — cost_usd = NULL (не считается).
+
+pricing:
+  # OpenAI через 302.ai
+  gpt-5:
+    prompt_per_1m: 5.00
+    completion_per_1m: 15.00
+  gpt-4o-mini:
+    prompt_per_1m: 0.15
+    completion_per_1m: 0.60
+  gpt-4.1-mini:
+    prompt_per_1m: 0.40
+    completion_per_1m: 1.60
+  gpt-4o:
+    prompt_per_1m: 2.50
+    completion_per_1m: 10.00
+
+  # Perplexity sonar (через 302.ai)
+  sonar-pro:
+    prompt_per_1m: 3.00
+    completion_per_1m: 15.00
+  sonar:
+    prompt_per_1m: 1.00
+    completion_per_1m: 1.00
+
+  # Anthropic Claude (через 302.ai если доступно)
+  claude-opus-4-7:
+    prompt_per_1m: 15.00
+    completion_per_1m: 75.00
+  claude-sonnet-4-6:
+    prompt_per_1m: 3.00
+    completion_per_1m: 15.00
+  claude-haiku-4-5-20251001:
+    prompt_per_1m: 1.00
+    completion_per_1m: 5.00
+
+  # DeepSeek (через 302.ai)
+  deepseek-chat:
+    prompt_per_1m: 0.27
+    completion_per_1m: 1.10
+
+  # Embeddings
+  text-embedding-3-small:
+    prompt_per_1m: 0.02
+    completion_per_1m: 0.00
+  text-embedding-3-large:
+    prompt_per_1m: 0.13
+    completion_per_1m: 0.00
+
+  # MAI Qwen (свой fallback)
+  qwen2.5-72b-instruct:
+    prompt_per_1m: 0.00     # local/private, без публичной цены
+    completion_per_1m: 0.00

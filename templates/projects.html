@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Свои проекты — Paideia{% endblock %}
+{% block content %}
+
+<div class="flex items-baseline justify-between mb-4">
+  <h1 class="text-2xl font-bold">Мои проекты</h1>
+  <a href="/project/new/wizard" class="bg-violet-700 text-white px-4 py-2 rounded text-sm hover:bg-violet-600">+ новый проект (визард)</a>
+</div>
+
+{% if projects %}
+  <p class="text-stone-500 mb-4 text-sm">
+    Образовательные инициативы поверх корпуса. Канвас → System → агенты → экспорт.
+  </p>
+  <ul class="space-y-2">
+    {% for p in projects %}
+      <li class="bg-white border border-stone-200 rounded p-4 hover:shadow">
+        <div class="flex items-start gap-3">
+          <div class="flex-1">
+            <a href="/project/{{ p.id }}/dashboard" class="font-semibold hover:underline">{{ p.name }}</a>
+            <span class="ml-2 text-xs text-stone-400">[<a class="hover:underline" href="/project/{{ p.id }}/system">system</a> · <a class="hover:underline" href="/project/{{ p.id }}/vepol">△</a> · <a class="hover:underline" href="/project/{{ p.id }}">канвас</a> · <a class="hover:underline" href="/project/{{ p.id }}/runs">runs</a>]</span>
+            <div class="text-xs text-stone-500 mt-1">
+              {% if p.author %}{{ p.author }} · {% endif %}
+              <span class="pill bg-stone-100 text-stone-600">{{ p.status }}</span>
+              {% if p.org_name %} · {{ p.org_name }}{% endif %}
+              {% if p.pattern %}<span class="pill pill-{{ p.pattern }} ml-2">{{ p.pattern }}</span>{% endif %}
+              {% if p.agentivity is not none %}<span class="text-stone-400 ml-2">a{{ p.agentivity }}</span>{% endif %}
+            </div>
+          </div>
+        </div>
+      </li>
+    {% endfor %}
+  </ul>
+{% else %}
+  <div class="bg-violet-50 border border-violet-200 rounded-lg p-8 text-center">
+    <div class="text-5xl mb-3">🧭</div>
+    <h2 class="text-xl font-bold mb-2">Ни одного проекта ещё нет</h2>
+    <p class="text-stone-600 mb-6 max-w-lg mx-auto">
+      Проект — это твой замысел курса/программы/интенсива/лаборатории. Начни с
+      визарда: 5 минут — и у тебя готовый канвас + SystemModel + рекомендации.
+    </p>
+    <a href="/project/new/wizard" class="inline-block bg-violet-700 text-white px-6 py-3 rounded text-sm font-semibold hover:bg-violet-600">
+      🚀 Создать первый проект (визард)
+    </a>
+    <div class="mt-6 text-xs text-stone-500">
+      Или: <a href="/project/new" class="underline hover:text-stone-900">создать вручную</a> (md-файл сразу)
+    </div>
+  </div>
+{% endif %}
+
+{% endblock %}

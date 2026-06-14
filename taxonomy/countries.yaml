@@ -1,0 +1,24 @@
+# ISO 3166-1 alpha-2 для стран, встречающихся в корпусе.
+# Регион добавлен для группировки фильтров.
+
+countries:
+  US: { name: "United States", region: north-america }
+  CA: { name: "Canada", region: north-america }
+  UK: { name: "United Kingdom", region: europe }
+  NL: { name: "Netherlands", region: europe }
+  DE: { name: "Germany", region: europe }
+  FR: { name: "France", region: europe }
+  IT: { name: "Italy", region: europe }
+  ES: { name: "Spain", region: europe }
+  GR: { name: "Greece", region: europe }
+  AU: { name: "Australia", region: oceania }
+  CN: { name: "China", region: asia }
+  JP: { name: "Japan", region: asia }
+  KR: { name: "South Korea", region: asia }
+  SG: { name: "Singapore", region: asia }
+  IN: { name: "India", region: asia }
+  AE: { name: "United Arab Emirates", region: middle-east }
+  IL: { name: "Israel", region: middle-east }
+  RU: { name: "Russia", region: cis }
+  ET: { name: "Ethiopia", region: africa }
+  INT: { name: "International / cross-border", region: international }

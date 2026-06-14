@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Динамика проекта по курсу — Paideia{% endblock %}
+{% block content %}
+
+<div class="mb-4 flex items-baseline gap-2 flex-wrap text-sm">
+  <a href="/courses" class="text-stone-500 hover:text-stone-900">курсы</a>
+  <span class="text-stone-300">/</span>
+  <a href="/course/{{ course.id }}" class="text-stone-500 hover:text-stone-900">{{ course.name }}</a>
+  <span class="text-stone-300">/</span>
+  <h1 class="text-lg font-bold">📈 Динамика проекта <code>{{ project_id }}</code> по курсу</h1>
+</div>
+
+<p class="text-sm text-stone-600 mb-4">
+  Для каждого события курса показан ближайший <strong>git-коммит</strong> файла проекта.
+  Так видно, на каком состоянии находился канвас в момент лекции/семинара/д/з.
+</p>
+
+{% if not has_git %}
+  <div class="bg-rose-50 border border-rose-200 rounded p-3 mb-4 text-sm">
+    Файл проекта <code>content/projects/{{ project_id }}.md</code> не найден на VM. Динамика не построится.
+  </div>
+{% endif %}
+
+{% if timeline %}
+  {% set kind_icons = {
+    'lecture': '🎤', 'seminar': '💬', 'homework_release': '📝',
+    'homework_submission': '📥', 'chat_burst': '💭', 'reading': '📖',
+    'exam': '🎯', 'reflection': '🪞'
+  } %}
+  <ol class="relative border-l-2 border-violet-300 ml-3 space-y-4">
+    {% for t in timeline %}
+      <li class="ml-6">
+        <span class="absolute -left-3 flex items-center justify-center w-6 h-6 bg-violet-600 text-white rounded-full text-xs">
+          {{ kind_icons.get(t.event_kind, '•') }}
+        </span>
+        <div class="bg-white border border-stone-200 rounded p-3">
+          <div class="flex items-baseline gap-2 mb-1 flex-wrap">
+            <span class="font-mono text-xs text-stone-500">{{ t.when[:10] }}</span>
+            <span class="pill bg-stone-100 text-stone-700">{{ t.event_kind }}</span>
+            <a href="/course/{{ course.id }}/event/{{ t.event_id }}" class="font-semibold text-sm hover:underline">{{ t.event_title or '(без названия)' }}</a>
+          </div>
+          {% if t.project_commit %}
+            <div class="text-xs text-stone-700 bg-stone-50 rounded p-2 mt-1">
+              <span class="font-mono text-violet-700">{{ t.project_commit.hash[:7] }}</span>
+              · <span class="text-stone-500">{{ t.project_commit.date[:16] }}</span>
+              · {{ t.project_commit.msg }}
+            </div>
+          {% else %}
+            <div class="text-xs text-stone-400 italic mt-1">проект ещё не существовал в этот момент</div>
+          {% endif %}
+        </div>
+      </li>
+    {% endfor %}
+  </ol>
+{% else %}
+  <div class="bg-stone-50 border border-stone-200 rounded p-6 text-center text-stone-500 text-sm">
+    В курсе нет событий — или git-история файла проекта пуста.
+  </div>
+{% endif %}
+
+{% endblock %}

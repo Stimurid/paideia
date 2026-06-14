@@ -1,0 +1,260 @@
+{% extends "base.html" %}
+{% block title %}Импорт кейсов — Paideia{% endblock %}
+{% block content %}
+
+<div class="mb-6"><a href="/" class="text-stone-500 hover:text-stone-900 text-sm">← каталог</a></div>
+
+<h1 class="text-2xl font-bold mb-2">Импорт кейсов</h1>
+<p class="text-stone-500 mb-6 text-sm">Один URL → один кейс. Файл/большой текст (PWC-отчёт, ТюмГУ-презентация, PDF) → много кейсов одним прогоном.</p>
+
+<!-- Переключатель режимов -->
+<div class="flex gap-2 mb-6">
+  <button onclick="showMode('url')" id="tab-url" class="px-4 py-2 rounded text-sm bg-stone-900 text-stone-100">🔗 URL → 1 кейс</button>
+  <button onclick="showMode('bulk')" id="tab-bulk" class="px-4 py-2 rounded text-sm bg-white border border-stone-300">📦 файл/текст → много кейсов</button>
+</div>
+
+<div id="mode-bulk" class="hidden mb-6">
+  <div class="bg-white border border-stone-200 rounded p-4">
+    <p class="text-stone-500 text-sm mb-4">Загрузи отчёт (PDF/DOCX/PPTX/MD/TXT) или вставь длинный текст. Документ режется на сегменты по эвристическим заголовкам или фиксированным чанкам; каждый сегмент прогоняется через gpt-4.1-mini на извлечение кейсов. Лимит: 30 сегментов за прогон.</p>
+
+    <label class="block text-xs uppercase tracking-wide text-stone-500 mb-1">файл</label>
+    <input id="bulk-file" type="file" accept=".pdf,.docx,.pptx,.md,.txt" class="mb-3 text-sm">
+
+    <label class="block text-xs uppercase tracking-wide text-stone-500 mb-1">или вставь текст</label>
+    <textarea id="bulk-text" rows="6" class="w-full px-3 py-2 border border-stone-300 rounded text-xs font-mono" placeholder="вставь сюда длинный текст или оставь пустым если загружен файл"></textarea>
+
+    <div class="flex gap-2 mt-3">
+      <button onclick="runBulk()" id="bulk-btn" class="bg-stone-900 text-stone-100 px-4 py-2 rounded text-sm hover:bg-stone-700">📦 извлечь кандидатов</button>
+      <span id="bulk-status" class="text-stone-500 text-sm self-center"></span>
+    </div>
+  </div>
+
+  <div id="bulk-result" class="hidden mt-6">
+    <h2 class="font-bold mb-3">Найдено кандидатов: <span id="bulk-count"></span> <span class="text-xs text-stone-400 font-normal" id="bulk-meta"></span></h2>
+    <div class="mb-3 flex gap-2">
+      <button onclick="checkAll(true)" class="text-xs bg-white border border-stone-300 px-3 py-1 rounded hover:bg-stone-50">выбрать всё</button>
+      <button onclick="checkAll(false)" class="text-xs bg-white border border-stone-300 px-3 py-1 rounded hover:bg-stone-50">снять всё</button>
+      <button onclick="saveSelected()" class="ml-auto bg-emerald-700 text-white px-4 py-2 rounded text-sm hover:bg-emerald-600">сохранить отмеченные</button>
+    </div>
+    <ul id="bulk-list" class="space-y-2"></ul>
+    <div id="bulk-save-status" class="mt-3 text-sm"></div>
+  </div>
+</div>
+
+<div id="mode-url">
+<p class="text-stone-500 mb-6 text-sm">Один URL новости/официальной страницы/публикации. Sonar-pro проходится по источнику, извлекает кейс по канвасу, возвращает draft md. Ты ревьюишь и сохраняешь.</p>
+
+<form id="import-form" class="bg-white border border-stone-200 rounded p-4 mb-6">
+  <label class="block text-xs uppercase tracking-wide text-stone-500 mb-1">URL источника</label>
+  <input id="import-url" type="url" required class="w-full px-3 py-2 border border-stone-300 rounded font-mono text-sm" placeholder="https://www.openai.com/...">
+  <div class="flex gap-2 mt-3">
+    <button type="submit" class="bg-stone-900 text-stone-100 px-4 py-2 rounded text-sm hover:bg-stone-700">импортировать</button>
+    <span id="import-status" class="text-stone-500 text-sm self-center"></span>
+  </div>
+</form>
+
+<div id="result" class="hidden">
+  <div class="flex items-center gap-3 mb-3">
+    <span class="pill bg-stone-100 text-stone-700" id="confidence-pill"></span>
+    <span class="text-xs text-stone-400" id="duration-label"></span>
+    <span class="text-xs text-stone-400 ml-auto" id="source-count"></span>
+  </div>
+
+  <div class="bg-white border border-stone-200 rounded p-4 mb-4">
+    <label class="block text-xs uppercase tracking-wide text-stone-500 mb-1">slug (id файла)</label>
+    <input id="case-id" class="font-mono text-sm border border-stone-300 rounded px-2 py-1 w-full mb-3">
+
+    <label class="block text-xs uppercase tracking-wide text-stone-500 mb-1">draft md (можно править)</label>
+    <textarea id="draft-md" rows="30" class="w-full px-3 py-2 border border-stone-300 rounded font-mono text-xs"></textarea>
+  </div>
+
+  <div id="open-questions-block" class="bg-amber-50 border border-amber-200 rounded p-4 mb-4 hidden">
+    <div class="text-xs uppercase tracking-wide text-amber-700 font-semibold mb-2">не извлечено / нужно уточнить</div>
+    <ul class="text-sm space-y-1" id="open-questions"></ul>
+  </div>
+
+  <div id="extra-block" class="bg-stone-50 border border-stone-200 rounded p-4 mb-4 hidden">
+    <div class="text-xs uppercase tracking-wide text-stone-500 font-semibold mb-2">другие кандидаты в источнике</div>
+    <ul class="text-sm space-y-1" id="extra-cands"></ul>
+  </div>
+
+  <div class="bg-white border border-stone-200 rounded p-4 mb-4">
+    <div class="text-xs uppercase tracking-wide text-stone-500 font-semibold mb-2">источники (цитаты sonar-pro)</div>
+    <ul class="text-xs space-y-1" id="citations"></ul>
+  </div>
+
+  <div class="flex gap-2">
+    <button id="save-btn" class="bg-emerald-700 text-white px-4 py-2 rounded text-sm hover:bg-emerald-600">сохранить как новый кейс</button>
+    <button onclick="document.getElementById('result').classList.add('hidden')" class="text-stone-500 hover:text-stone-900 text-sm">отмена</button>
+  </div>
+
+  <div id="save-status" class="mt-3 text-sm"></div>
+</div>
+
+</div>
+
+<script>
+function showMode(m) {
+  document.getElementById('mode-url').classList.toggle('hidden', m !== 'url');
+  document.getElementById('mode-bulk').classList.toggle('hidden', m !== 'bulk');
+  document.getElementById('tab-url').className = 'px-4 py-2 rounded text-sm ' + (m === 'url' ? 'bg-stone-900 text-stone-100' : 'bg-white border border-stone-300');
+  document.getElementById('tab-bulk').className = 'px-4 py-2 rounded text-sm ' + (m === 'bulk' ? 'bg-stone-900 text-stone-100' : 'bg-white border border-stone-300');
+}
+
+async function runBulk() {
+  const file = document.getElementById('bulk-file').files[0];
+  const text = document.getElementById('bulk-text').value.trim();
+  const status = document.getElementById('bulk-status');
+  const btn = document.getElementById('bulk-btn');
+  if (!file && !text) { status.textContent = 'нужен файл или текст'; return; }
+  btn.disabled = true;
+  status.textContent = '⏳ извлекаю текст и режу на сегменты…';
+  document.getElementById('bulk-result').classList.add('hidden');
+  try {
+    let r;
+    if (file) {
+      const fd = new FormData(); fd.append('file', file);
+      status.textContent = `⏳ ${file.name}: парсю формат и прогоняю сегменты через gpt-4.1-mini (это 30-90 с)…`;
+      r = await fetch('/api/bulk-extract', {method: 'POST', body: fd});
+    } else {
+      status.textContent = '⏳ режу текст и прогоняю через gpt-4.1-mini…';
+      r = await fetch('/api/bulk-extract', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({text})});
+    }
+    if (!r.ok) throw new Error(await r.text());
+    const data = await r.json();
+    status.textContent = '';
+    renderCandidates(data);
+  } catch (e) {
+    status.textContent = 'ошибка: ' + e.message;
+  } finally { btn.disabled = false; }
+}
+
+function renderCandidates(data) {
+  document.getElementById('bulk-result').classList.remove('hidden');
+  document.getElementById('bulk-count').textContent = data.candidates.length;
+  document.getElementById('bulk-meta').textContent =
+    `· ${data.segments_total || 0} сегментов · ${data.source_label || ''} · ${((data.stats?.duration_ms || 0)/1000).toFixed(1)}s`;
+  const list = document.getElementById('bulk-list');
+  list.innerHTML = '';
+  data.candidates.forEach((c, i) => {
+    const li = document.createElement('li');
+    li.className = 'bg-white border border-stone-200 rounded p-3';
+    li.innerHTML = `
+      <div class="flex items-start gap-3">
+        <input type="checkbox" class="cand-check mt-1" data-idx="${i}" checked>
+        <div class="flex-1">
+          <div class="flex items-start gap-2">
+            <strong>${escapeHtml(c.name || c.id)}</strong>
+            ${c.ai?.pattern ? `<span class="pill pill-${c.ai.pattern}">${c.ai.pattern}</span>` : ''}
+            <span class="text-xs text-stone-400">a${c.ai?.agentivity ?? '?'}</span>
+            <span class="text-xs text-stone-400">${c.organization?.country || ''} · ${c.organization?.type || ''}</span>
+            <span class="ml-auto pill bg-stone-100 text-stone-500">${c.confidence || '?'}</span>
+          </div>
+          <div class="text-sm text-stone-700 mt-1">${escapeHtml(c.summary || '')}</div>
+          <details class="mt-2"><summary class="text-xs text-stone-400 cursor-pointer">excerpt + slug</summary>
+            <div class="text-xs text-stone-500 mt-1"><strong>id:</strong> <code>${c.id}</code></div>
+            <div class="text-xs text-stone-500 mt-1 bg-stone-50 border border-stone-200 rounded p-2 max-h-40 overflow-y-auto whitespace-pre-line">${escapeHtml(c.source_excerpt || '')}</div>
+          </details>
+        </div>
+      </div>`;
+    list.appendChild(li);
+  });
+  list.dataset.candidates = JSON.stringify(data.candidates);
+}
+
+function checkAll(v) {
+  document.querySelectorAll('.cand-check').forEach(c => c.checked = v);
+}
+
+async function saveSelected() {
+  const list = document.getElementById('bulk-list');
+  const all = JSON.parse(list.dataset.candidates || '[]');
+  const picks = [...document.querySelectorAll('.cand-check')]
+    .filter(c => c.checked).map(c => all[+c.dataset.idx]);
+  const ss = document.getElementById('bulk-save-status');
+  if (!picks.length) { ss.textContent = 'ничего не выбрано'; return; }
+  ss.textContent = `сохраняю ${picks.length}…`;
+  const r = await fetch('/api/bulk-save', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({candidates: picks}),
+  });
+  if (r.ok) {
+    const d = await r.json();
+    ss.innerHTML = `<span class="text-emerald-700">сохранено: ${d.saved} (${d.skipped} пропущено как дубликаты)</span> · <a href="/" class="underline">в каталог</a>`;
+  } else ss.innerHTML = '<span class="text-rose-600">ошибка: ' + escapeHtml(await r.text()) + '</span>';
+}
+
+function escapeHtml(s) {
+  return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+const form = document.getElementById('import-form');
+const status = document.getElementById('import-status');
+const result = document.getElementById('result');
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const url = document.getElementById('import-url').value.trim();
+  if (!url) return;
+  status.textContent = '🔍 sonar-pro собирает источники, это 15-40 с…';
+  result.classList.add('hidden');
+  try {
+    const r = await fetch('/api/import-url', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({url}),
+    });
+    if (!r.ok) throw new Error(await r.text());
+    const data = await r.json();
+    status.textContent = '';
+    document.getElementById('case-id').value = data.id || '';
+    document.getElementById('draft-md').value = data.draft_md || '';
+    document.getElementById('confidence-pill').textContent = 'confidence: ' + (data.confidence || '?');
+    document.getElementById('duration-label').textContent = ((data.duration_ms || 0)/1000).toFixed(1) + 's';
+    document.getElementById('source-count').textContent = (data.citations || []).length + ' источников';
+    const cit = document.getElementById('citations'); cit.innerHTML='';
+    (data.citations || []).forEach(u => {
+      const li = document.createElement('li');
+      li.innerHTML = `<a class="text-blue-600 hover:underline break-all" href="${u}" target="_blank">${u}</a>`;
+      cit.appendChild(li);
+    });
+    const ob = document.getElementById('open-questions-block');
+    const oq = document.getElementById('open-questions');
+    if (data.open_questions && data.open_questions.length) {
+      oq.innerHTML = '';
+      data.open_questions.forEach(q => { const li = document.createElement('li'); li.textContent = '• ' + q; oq.appendChild(li); });
+      ob.classList.remove('hidden');
+    } else ob.classList.add('hidden');
+    const eb = document.getElementById('extra-block');
+    const ec = document.getElementById('extra-cands');
+    if (data.additional_candidates && data.additional_candidates.length) {
+      ec.innerHTML = '';
+      data.additional_candidates.forEach(c => { const li = document.createElement('li'); li.textContent = '• ' + c; ec.appendChild(li); });
+      eb.classList.remove('hidden');
+    } else eb.classList.add('hidden');
+    result.classList.remove('hidden');
+  } catch (err) {
+    status.textContent = 'ошибка: ' + err.message;
+  }
+});
+
+document.getElementById('save-btn').addEventListener('click', async () => {
+  const id = document.getElementById('case-id').value.trim();
+  const md = document.getElementById('draft-md').value;
+  const ss = document.getElementById('save-status');
+  if (!id) { ss.textContent = 'нужен slug id'; ss.className='text-rose-600 mt-3 text-sm'; return; }
+  if (!md) { ss.textContent = 'нужен draft md'; ss.className='text-rose-600 mt-3 text-sm'; return; }
+  ss.textContent = 'сохраняю…';
+  const r = await fetch('/api/import-save', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({id, draft_md: md}),
+  });
+  if (r.ok) {
+    const data = await r.json();
+    ss.innerHTML = `<span class="text-emerald-700">сохранено: <a class="underline" href="/case/${data.id}">/case/${data.id}</a></span>`;
+  } else {
+    ss.textContent = 'ошибка: ' + (await r.text());
+    ss.className='text-rose-600 mt-3 text-sm';
+  }
+});
+</script>
+{% endblock %}

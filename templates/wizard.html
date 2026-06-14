@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}Проектный визард — Paideia{% endblock %}
+{% block content %}
+
+<div class="mb-4 flex items-center gap-3">
+  <a href="/projects" class="text-stone-500 hover:text-stone-900 text-sm">← проекты</a>
+  <h1 class="text-xl font-bold">🧭 Проектный визард</h1>
+  <span class="text-stone-500 text-sm">— EducationalSystemModel за 10 минут</span>
+</div>
+
+{% if not teacher_type %}
+<!-- Шаг 0: типология преподавателей -->
+<div class="bg-white border border-stone-200 rounded p-6 mb-4">
+  <h2 class="text-lg font-bold mb-1">С чего ты входишь?</h2>
+  <p class="text-stone-500 text-sm mb-5">Каждый тип преподавателя — свой entry route. Выбери ближайший — система задаст вопросы под него.</p>
+
+  <form method="get" action="/project/new/wizard" class="grid grid-cols-2 gap-3">
+    {% for t in teacher_types %}
+      <button type="submit" name="teacher_type" value="{{ t.id }}"
+              class="bg-stone-50 hover:bg-violet-50 hover:border-violet-300 border border-stone-200 rounded-lg p-4 text-left transition">
+        <div class="font-bold mb-1">{{ t.name }}</div>
+        <div class="text-stone-600 text-sm mb-2">{{ t.description }}</div>
+        <div class="text-xs text-stone-400">→ {{ t.entry_route }}</div>
+      </button>
+    {% endfor %}
+  </form>
+</div>
+{% else %}
+
+<!-- Шаг 1: вопросы под тип -->
+<div class="bg-violet-50 border border-violet-200 rounded p-3 mb-4 text-sm flex items-center gap-3">
+  <span class="pill bg-violet-700 text-white">{{ teacher_type.name }}</span>
+  <span class="text-stone-600">{{ teacher_type.description }}</span>
+  <a href="/project/new/wizard" class="ml-auto text-xs text-stone-500 hover:underline">← сменить</a>
+</div>
+
+<form method="post" action="/api/project/new/wizard" class="space-y-4">
+  <input type="hidden" name="teacher_type" value="{{ teacher_type.id }}">
+
+  <div class="bg-white border border-stone-200 rounded p-4">
+    <label class="block text-xs uppercase text-stone-500 mb-1">id проекта (slug)</label>
+    <input name="project_id" required pattern="[a-z0-9-]+"
+           class="w-full px-3 py-2 border border-stone-300 rounded font-mono text-sm"
+           placeholder="my-elective-2026">
+    <label class="block text-xs uppercase text-stone-500 mb-1 mt-3">название</label>
+    <input name="project_name" required
+           class="w-full px-3 py-2 border border-stone-300 rounded text-sm"
+           placeholder="Электив 'Педагогика AI-диалога'">
+    <label class="block text-xs uppercase text-stone-500 mb-1 mt-3">тип системы</label>
+    <select name="kind" class="px-3 py-2 border border-stone-300 rounded text-sm">
+      <option value="course">course (полноценный курс)</option>
+      <option value="module" selected>module (модуль курса)</option>
+      <option value="elective">elective (электив)</option>
+      <option value="programme">programme (программа)</option>
+      <option value="intensive">intensive (интенсив)</option>
+      <option value="lab">lab (лаборатория)</option>
+      <option value="studio">studio (студия)</option>
+      <option value="experiment">experiment (эксперимент)</option>
+    </select>
+  </div>
+
+  <div class="bg-white border border-stone-200 rounded p-4">
+    <h3 class="font-bold mb-3">Вопросы для твоего типа</h3>
+    {% for q in teacher_type.first_questions %}
+      <div class="mb-3">
+        <label class="block text-sm font-medium mb-1">{{ loop.index }}. {{ q }}</label>
+        <textarea name="answer_{{ loop.index0 }}" rows="3"
+                  class="w-full px-3 py-2 border border-stone-300 rounded text-sm"></textarea>
+      </div>
+    {% endfor %}
+  </div>
+
+  <div class="bg-white border border-stone-200 rounded p-4">
+    <h3 class="font-bold mb-3">Ролевая модель команды (ТюмГУ)</h3>
+    <p class="text-xs text-stone-500 mb-3">Кто из людей в проекте? Что делегируем AI-ролям?</p>
+    {% for r in human_roles %}
+      <label class="flex items-start gap-3 mb-2 text-sm cursor-pointer hover:bg-stone-50 p-2 rounded">
+        <input type="checkbox" name="human_roles" value="{{ r.id }}" class="mt-1">
+        <div>
+          <strong>{{ r.name }}</strong>
+          <div class="text-xs text-stone-600">{{ r.function }}</div>
+        </div>
+      </label>
+    {% endfor %}
+  </div>
+
+  <div class="bg-white border border-stone-200 rounded p-4">
+    <h3 class="font-bold mb-3">AI-персоны</h3>
+    <p class="text-xs text-stone-500 mb-3">Какие AI-роли нужны в проекте?</p>
+    {% for p in ai_persona_kinds %}
+      <label class="flex items-start gap-3 mb-2 text-sm cursor-pointer hover:bg-stone-50 p-2 rounded">
+        <input type="checkbox" name="ai_personas" value="{{ p.id }}" class="mt-1">
+        <div>
+          <strong>{{ p.name }}</strong>
+          <div class="text-xs text-stone-600">{{ p.when_useful }}</div>
+          <div class="text-xs text-stone-400">примеры: {{ p.examples | join("; ") }}</div>
+        </div>
+      </label>
+    {% endfor %}
+  </div>
+
+  <div class="flex gap-3">
+    <button type="submit" class="bg-stone-900 text-stone-100 px-6 py-2 rounded">▶ создать проект + построить SystemModel</button>
+    {% if teacher_type.suggest_run %}
+      <span class="text-xs text-stone-500 self-center">после создания будет предложен Run: <code>{{ teacher_type.suggest_run }}</code></span>
+    {% endif %}
+  </div>
+</form>
+
+{% endif %}
+
+{% endblock %}

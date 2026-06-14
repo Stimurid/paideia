@@ -1,0 +1,184 @@
+scenarios:
+  # Семья: перенос и синтез
+  - id: transfer-properties
+    name: "Перенос свойств из кейса"
+    family: transfer
+    icon: "🔁"
+    needs_case_param: true
+    model_role: deep
+    description: "Берёт архитектуру выбранного кейса корпуса и адаптирует под параметры твоего проекта"
+
+  - id: project-synthesis
+    name: "Синтез проекта: место в корпусе+теории+архиве"
+    family: transfer
+    icon: "🧬"
+    model_role: deep
+    description: "Развёрнутый отчёт: где проект на карте, какие гипотезы поддерживает/опровергает, что говорит твой архив"
+
+  # Семья: ТРИЗ
+  - id: triz-contradictions
+    name: "Противоречия проекта"
+    family: triz
+    icon: "⚡"
+    model_role: deep
+    description: "Поиск пар требований, мешающих друг другу"
+
+  - id: triz-ikr
+    name: "Идеальный конечный результат"
+    family: triz
+    icon: "💎"
+    model_role: deep
+    description: "Провокация: что было бы, если ресурс брался сам собой"
+
+  - id: triz-40-methods
+    name: "40 приёмов под педдизайн"
+    family: triz
+    icon: "🔧"
+    model_role: deep
+    description: "Топ-5 ТРИЗ-приёмов разрешения противоречий + примеры из корпуса"
+
+  - id: triz-vepol
+    name: "Веполь: студент-содержание-посредник"
+    family: triz
+    icon: "△"
+    model_role: deep
+    description: "Где в проекте баланс триады нарушен"
+
+  - id: triz-evolution
+    name: "Эволюционные тренды по 8 линиям"
+    family: triz
+    icon: "📈"
+    model_role: deep
+    description: "Куда твой проект уже сдвинулся, куда не сдвинулся"
+
+  # Семья: стейкхолдеры
+  - id: stakeholder-map
+    name: "Карта стейкхолдеров"
+    family: stakeholder
+    icon: "🎭"
+    model_role: deep
+    description: "Кто релевантен, их интересы, страхи, рычаги, временные горизонты"
+
+  - id: stakeholder-attack
+    name: "Обстрел проекта от лица стейкхолдеров"
+    family: stakeholder
+    icon: "🎯"
+    model_role: deep
+    description: "5 самых неприятных вопросов от каждой позиции"
+
+  - id: stakeholder-friction
+    name: "Социальное трение и сопротивление"
+    family: stakeholder
+    icon: "⚙️"
+    model_role: deep
+    description: "Карта зон трения с интенсивностью 1–5"
+
+  - id: stakeholder-compliance
+    name: "Проверка на нормативку и этику"
+    family: stakeholder
+    icon: "⚖️"
+    model_role: deep
+    description: "ФГОС, ФЗ, ПДн, этический кодекс — где проект может застрять"
+
+  # Семья: симулятор
+  - id: sim-semester
+    name: "Симулятор первого семестра"
+    family: simulator
+    icon: "📅"
+    model_role: deep
+    description: "Прогон по неделям: что произойдёт, что отвалится"
+
+  - id: sim-what-if
+    name: "Стресс-тесты «что если»"
+    family: simulator
+    icon: "🧪"
+    model_role: deep
+    description: "Бюджет −50%, API закрыли, преподаватель ушёл, регулятор требует..."
+
+  - id: sim-graduate
+    name: "Симулятор выпуска"
+    family: simulator
+    icon: "🎓"
+    model_role: deep
+    description: "Заявленные vs реалистично формируемые компетенции"
+
+  - id: sim-anti-washing
+    name: "Anti-agent-washing аудит"
+    family: simulator
+    icon: "🔬"
+    model_role: deep
+    description: "Заявленный vs фактический уровень агентности"
+
+  # Семья: эволюция
+  - id: evo-next-steps
+    name: "Что было бы дальше"
+    family: evolution
+    icon: "→"
+    model_role: deep
+    description: "3 возможных вектора эволюции с опорой на кейсы корпуса"
+
+  - id: evo-swap-element
+    name: "Замена ключевого элемента"
+    family: evolution
+    icon: "↔"
+    model_role: deep
+    description: "Вместо ChatGPT — Qwen / вместо лектора — peer-group / и т.д."
+
+  - id: evo-local-mutation
+    name: "Мутация под локальный контекст"
+    family: evolution
+    icon: "🌱"
+    model_role: deep
+    description: "Адаптация архитектуры под конкретный вуз/регион/бюджет"
+
+  # Семья: метакогнитив
+  - id: meta-assumptions
+    name: "Картирование собственных ассумпций"
+    family: meta
+    icon: "🧠"
+    model_role: deep
+    description: "Что считается самоочевидным, но на самом деле — предположение"
+
+  - id: meta-blind-spots
+    name: "Поиск белых пятен"
+    family: meta
+    icon: "🕳"
+    model_role: deep
+    description: "Что аналоги корпуса описывают, а ты — нет"
+
+  - id: meta-slop-miner
+    name: "Slop-минёр по тексту канваса"
+    family: meta
+    icon: "💣"
+    model_role: deep
+    description: "Где формулировки звучат умно, но не несут операции"
+
+  # Дикие идеи
+  - id: wild-time-machine
+    name: "Time-machine: проект через 5 лет"
+    family: wild
+    icon: "🕰"
+    model_role: deep
+    description: "Какие элементы стали стандартом, какие отвалились"
+
+  - id: wild-genealogy
+    name: "Genealogy: родители и дети проекта"
+    family: wild
+    icon: "🌳"
+    needs_case_param: true
+    model_role: deep
+    description: "Какие практики дали этому кейсу вырасти, что вырастет из него"
+
+  - id: wild-counter-corpus
+    name: "Counter-corpus: обстрел неудачами"
+    family: wild
+    icon: "💀"
+    model_role: deep
+    description: "Контр-сигналы корпуса (Reading, Sydney, Italian ban) против твоего проекта"
+
+  - id: wild-hypothesis-forge
+    name: "Кузница новой гипотезы H6"
+    family: wild
+    icon: "🔨"
+    model_role: deep
+    description: "Помогает сформулировать собственную гипотезу + ищет supports/contradicts в корпусе"

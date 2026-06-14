@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}LLM #{{ run.id }} — Paideia{% endblock %}
+{% block content %}
+
+<div class="mb-6"><a href="/llm-runs" class="text-stone-500 hover:text-stone-900 text-sm">← аудит</a></div>
+
+<h1 class="text-2xl font-bold mb-2">LLM run #{{ run.id }}</h1>
+<div class="text-stone-500 text-sm mb-6">
+  <span class="pill bg-stone-100 text-stone-600">{{ run.purpose }}</span>
+  · model: {{ run.model_role }}
+  · target: {{ run.target_kind }}:{{ run.target_id or '—' }}
+  {% if run.section_id %} · section: {{ run.section_id }}{% endif %}
+  · {{ (run.duration_ms/1000)|round(1) }}s
+  · <span class="pill {% if run.status == 'ok' %}bg-emerald-100 text-emerald-700{% else %}bg-rose-100 text-rose-700{% endif %}">{{ run.status }}</span>
+</div>
+
+{% if run.error %}
+  <div class="bg-rose-50 border border-rose-200 rounded p-4 text-sm text-rose-700 mb-6">{{ run.error }}</div>
+{% endif %}
+
+<div class="grid grid-cols-2 gap-4">
+  <div>
+    <h2 class="font-bold text-sm mb-2">📥 input</h2>
+    <pre class="text-xs bg-white border border-stone-200 rounded p-3 overflow-x-auto max-h-[600px]">{{ run.input_json }}</pre>
+  </div>
+  <div>
+    <h2 class="font-bold text-sm mb-2">📤 output</h2>
+    <pre class="text-xs bg-white border border-stone-200 rounded p-3 overflow-x-auto max-h-[600px]">{{ run.output_json or '(пусто)' }}</pre>
+  </div>
+</div>
+
+{% if run.citations_json and run.citations_json != '[]' %}
+  <div class="mt-6">
+    <h2 class="font-bold text-sm mb-2">🔗 citations</h2>
+    <pre class="text-xs bg-white border border-stone-200 rounded p-3 overflow-x-auto">{{ run.citations_json }}</pre>
+  </div>
+{% endif %}
+
+{% endblock %}

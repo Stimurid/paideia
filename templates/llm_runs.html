@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}LLM-аудит — Paideia{% endblock %}
+{% block content %}
+
+<div class="mb-6"><a href="/" class="text-stone-500 hover:text-stone-900 text-sm">← каталог</a></div>
+
+<div class="flex items-baseline justify-between mb-6">
+  <h1 class="text-2xl font-bold">📊 Аудит LLM-вызовов</h1>
+  <div class="text-stone-500 text-sm">
+    {{ total }} вызовов · {{ total_seconds|round(1) }} с
+    {% if total_tokens %} · 🪙 {{ "{:,}".format(total_tokens) }} токенов{% endif %}
+    {% if total_cost %} · 💰 ${{ "%.4f" | format(total_cost) }}{% endif %}
+    {% if cached_count %} · 💾 {{ cached_count }} из кеша{% endif %}
+  </div>
+</div>
+
+<form method="get" action="/llm-runs" class="bg-white border border-stone-200 rounded p-3 mb-6 flex gap-3 items-end text-sm">
+  <div>
+    <label class="block text-xs uppercase text-stone-500 mb-1">purpose</label>
+    <select name="purpose" class="px-2 py-1 border border-stone-300 rounded text-sm">
+      <option value="">— все —</option>
+      {% for p in purposes %}<option value="{{ p }}" {% if filter_purpose == p %}selected{% endif %}>{{ p }}</option>{% endfor %}
+    </select>
+  </div>
+  <div>
+    <label class="block text-xs uppercase text-stone-500 mb-1">статус</label>
+    <select name="status" class="px-2 py-1 border border-stone-300 rounded text-sm">
+      <option value="">— все —</option>
+      <option value="ok" {% if filter_status == 'ok' %}selected{% endif %}>ok</option>
+      <option value="error" {% if filter_status == 'error' %}selected{% endif %}>error</option>
+    </select>
+  </div>
+  <button class="bg-stone-900 text-stone-100 px-3 py-1.5 rounded text-sm">фильтр</button>
+  <a href="/llm-runs" class="text-stone-500 text-xs hover:underline ml-2">сбросить</a>
+</form>
+
+<table class="w-full text-xs bg-white border border-stone-200 rounded">
+  <thead class="bg-stone-100 text-stone-500 uppercase">
+    <tr>
+      <th class="text-left px-3 py-2">id</th>
+      <th class="text-left px-3 py-2">purpose</th>
+      <th class="text-left px-3 py-2">model</th>
+      <th class="text-left px-3 py-2">target</th>
+      <th class="text-left px-3 py-2">section</th>
+      <th class="text-right px-3 py-2">s</th>
+      <th class="text-right px-3 py-2">in→out tokens</th>
+      <th class="text-right px-3 py-2">$</th>
+      <th class="text-left px-3 py-2">статус</th>
+      <th class="text-left px-3 py-2">время</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for r in runs %}
+      <tr class="border-t border-stone-100 hover:bg-stone-50">
+        <td class="px-3 py-1.5 font-mono"><a href="/llm-runs/{{ r.id }}" class="hover:underline">#{{ r.id }}</a></td>
+        <td class="px-3 py-1.5"><span class="pill bg-stone-100 text-stone-600">{{ r.purpose }}</span></td>
+        <td class="px-3 py-1.5">{{ r.model_role }}</td>
+        <td class="px-3 py-1.5">{{ r.target_kind }}:{{ r.target_id or '—' }}</td>
+        <td class="px-3 py-1.5">{{ r.section_id or '' }}</td>
+        <td class="px-3 py-1.5 text-right">{{ (r.duration_ms/1000)|round(1) }}</td>
+        <td class="px-3 py-1.5 text-right text-xs">
+          {% if r.tokens_prompt %}{{ r.tokens_prompt }}→{{ r.tokens_completion or 0 }}{% else %}—{% endif %}
+          {% if r.cached %}<span class="text-emerald-600 ml-1" title="из кеша">💾</span>{% endif %}
+        </td>
+        <td class="px-3 py-1.5 text-right text-xs">
+          {% if r.cost_usd %}${{ "%.4f" | format(r.cost_usd) }}{% else %}—{% endif %}
+        </td>
+        <td class="px-3 py-1.5">
+          {% if r.status == 'ok' %}<span class="pill bg-emerald-100 text-emerald-700">ok</span>
+          {% else %}<span class="pill bg-rose-100 text-rose-700" title="{{ r.error }}">err</span>{% endif %}
+        </td>
+        <td class="px-3 py-1.5 text-stone-400">{{ r.created_at }}</td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% endblock %}

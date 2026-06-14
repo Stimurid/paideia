@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Добро пожаловать — Paideia{% endblock %}
+{% block content %}
+
+<div class="max-w-3xl mx-auto">
+  <div class="text-center mb-8">
+    <h1 class="text-3xl font-bold mb-3">Добро пожаловать в Paideia</h1>
+    <p class="text-stone-600">
+      Платформа для проектирования образовательных программ с ИИ:
+      <strong>118 кейсов</strong> мировых практик, теория (типы / гипотезы / противоречия / моды),
+      <strong>40 ТРИЗ-приёмов</strong> под педдизайн, библиотека книг,
+      LLM-агенты-консультанты.
+    </p>
+  </div>
+
+  <h2 class="text-xl font-bold mb-4">Кто ты сейчас?</h2>
+  <p class="text-sm text-stone-500 mb-4">
+    Выбор определит твой default-вход и видимость разделов. Можно сменить в любой момент через ⚙️ / Сменить роль.
+  </p>
+
+  <form method="post" action="/api/onboarding/select-role" class="space-y-3">
+    {% for r in roles %}
+      <label class="block bg-white border-2 border-stone-200 hover:border-violet-400 rounded-lg p-4 cursor-pointer transition">
+        <div class="flex items-start gap-4">
+          <input type="radio" name="role" value="{{ r.key }}" class="mt-1" {% if loop.first %}required{% endif %}>
+          <div class="flex-1">
+            <div class="flex items-center gap-2 mb-1">
+              <span class="text-2xl">{{ r.icon }}</span>
+              <span class="font-bold">{{ r.label }}</span>
+            </div>
+            <div class="text-sm text-stone-600">{{ r.desc }}</div>
+            <div class="text-xs text-stone-400 mt-1">→ {{ r.default_action }}</div>
+          </div>
+        </div>
+      </label>
+    {% endfor %}
+
+    <div class="flex justify-between pt-4">
+      <a href="/" class="text-stone-500 text-sm hover:text-stone-900 self-center">пропустить →</a>
+      <button class="bg-violet-700 text-white px-6 py-2 rounded font-semibold hover:bg-violet-600">
+        продолжить
+      </button>
+    </div>
+  </form>
+
+  <div class="mt-10 bg-amber-50 border border-amber-200 rounded p-4 text-sm">
+    <strong>Что под капотом:</strong>
+    <ul class="list-disc ml-5 mt-1 space-y-1 text-stone-700">
+      <li>302.ai как роутер моделей (gpt-4.1-mini fast / gpt-5 deep / sonar-pro search)</li>
+      <li>Корпус и теория — markdown-файлы под git, SQLite индекс пересобирается одной командой</li>
+      <li>Hierarchical RAG: библиотека книг → секции → чанки + векторный поиск (sqlite-vec)</li>
+      <li>Лимиты по умолчанию: 30 fast / 5 deep / 3 search запросов в день. <a href="/support" class="text-violet-700 hover:underline">Поддержать</a> — лимиты снимаются.</li>
+    </ul>
+  </div>
+</div>
+
+{% endblock %}

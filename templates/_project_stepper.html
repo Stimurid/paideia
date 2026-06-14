@@ -1,0 +1,105 @@
+{# Stepper для всех project-страниц. Ожидает в контексте: project (dict), stepper (dict). #}
+{% set current = stepper.current if stepper and stepper.current else "" %}
+{% set steps = [
+    ("dashboard", "Dashboard", "/project/" ~ project.id ~ "/dashboard", stepper.dashboard if stepper else None),
+    ("system", "System Model", "/project/" ~ project.id ~ "/system", stepper.system if stepper else None),
+    ("canvas", "Канвас", "/project/" ~ project.id, stepper.canvas if stepper else None),
+    ("vepol", "△ Веполь", "/project/" ~ project.id ~ "/vepol", stepper.vepol if stepper else None),
+    ("lab", "Lab", "/project/" ~ project.id ~ "/lab", stepper.lab if stepper else None),
+    ("runs", "Runs", "/project/" ~ project.id ~ "/runs", stepper.runs if stepper else None),
+    ("export", "Export", "/project/" ~ project.id ~ "/export", stepper.export if stepper else None),
+] %}
+
+<div class="bg-white border border-stone-200 rounded-lg p-3 mb-4 sticky top-16 z-[5] shadow-sm">
+  <div class="flex items-center gap-2">
+    <a href="/projects" class="text-stone-400 hover:text-stone-700 text-xs">← все проекты</a>
+    <span class="text-stone-300">/</span>
+    <span class="font-semibold text-sm">{{ project.name }}</span>
+    <button onclick="openRunModal()"
+            class="ml-auto bg-violet-700 text-white text-xs px-3 py-1.5 rounded hover:bg-violet-600 flex items-center gap-1">
+      ▶ Запустить агента
+    </button>
+  </div>
+
+  <div class="flex items-center gap-1 mt-3 overflow-x-auto">
+    {% for sid, label, url, info in steps %}
+      <a href="{{ url }}"
+         class="flex-1 min-w-[100px] flex flex-col items-start px-3 py-2 rounded
+                {% if sid == current %}bg-stone-900 text-white
+                {% else %}hover:bg-stone-100 text-stone-700{% endif %}
+                transition">
+        <div class="flex items-center gap-1.5 text-xs">
+          <span class="font-mono text-[10px] opacity-60">{{ loop.index }}</span>
+          <span class="font-medium">{{ label }}</span>
+        </div>
+        <div class="text-[10px] mt-0.5 opacity-75">
+          {% if info %}{{ info }}{% else %}—{% endif %}
+        </div>
+      </a>
+      {% if not loop.last %}<div class="text-stone-300">›</div>{% endif %}
+    {% endfor %}
+  </div>
+</div>
+
+{# Modal с 10 Run profiles #}
+<div id="run-modal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onclick="if(event.target===this)closeRunModal()">
+  <div class="bg-white rounded-lg max-w-2xl w-full max-h-[85vh] overflow-y-auto">
+    <div class="px-6 py-4 border-b border-stone-200 sticky top-0 bg-white">
+      <div class="flex items-start gap-3">
+        <div>
+          <h3 class="font-bold text-lg">▶ Запустить агента на проекте</h3>
+          <p class="text-stone-500 text-sm">Выбери profile. Каждый — это связка L1 агентов и контекста.</p>
+        </div>
+        <button onclick="closeRunModal()" class="ml-auto text-stone-400 hover:text-stone-900 text-2xl leading-none">×</button>
+      </div>
+    </div>
+
+    <form method="post" action="/api/project/{{ project.id }}/agent-run/start" class="p-6 space-y-2">
+      <input type="hidden" name="space_id" value="">
+
+      {% set profiles = [
+        ("default", "🤖 Default", "Прогон через 4 базовых агента (reconstructor + contradiction-cutter + grounder + quality-gate). Быстрый аудит проекта.", "~30 с"),
+        ("kosmos", "🌌 KOSMOS · 6 альтернатив", "Автономная генерация 6 вариантов программы через 6 стратегий (invert/split/mutate/merge/idealize/outcome-invert).", "~90 с"),
+        ("stakeholder_pressure", "🎭 Stakeholder Pressure", "Обстрел проекта 7 стейкхолдерами (студент-скептик, ректор, ФГОС-эксперт, работодатель, etc).", "~60 с"),
+        ("semester_sim", "📅 Semester Simulator", "Прогон семестра по неделям: что произойдёт, что отвалится, где сигналы.", "~60 с"),
+        ("anti_washing", "🔬 Anti-Agent-Washing", "Скоринг заявленной vs фактической агентности по 6 критериям.", "~45 с"),
+        ("time_machine", "🕰 Time Machine — 5 лет", "Проект через 5 лет: что устарело, что mainstream, что осталось ценным.", "~60 с"),
+        ("genealogy", "🌳 Genealogy — родители/дети", "Найти из каких кейсов корпуса проект мог произойти и куда может развиться.", "~45 с"),
+        ("counter_corpus", "💀 Counter-corpus — обстрел провалами", "Применить failures корпуса к проекту: где сломается так же.", "~60 с"),
+        ("hypothesis_forge", "🔨 Hypothesis Forge — H6+", "Сформулировать новую гипотезу из проекта, найти supports/contradicts в корпусе.", "~75 с"),
+        ("export_rpd", "📄 Export РПД", "Сборка РПД с привязкой к ФГОС-компетенциям.", "~120 с"),
+      ] %}
+
+      <div class="text-xs text-stone-500 uppercase tracking-wide font-semibold mb-2">profile</div>
+      {% for pid, name, descr, eta in profiles %}
+        <label class="flex items-start gap-3 p-3 border border-stone-200 rounded hover:bg-stone-50 cursor-pointer">
+          <input type="radio" name="profile" value="{{ pid }}" {% if loop.first %}checked{% endif %} class="mt-1">
+          <div class="flex-1">
+            <div class="flex items-baseline gap-2">
+              <span class="font-semibold text-sm">{{ name }}</span>
+              <span class="text-xs text-stone-400">{{ eta }}</span>
+            </div>
+            <div class="text-xs text-stone-600 mt-0.5">{{ descr }}</div>
+          </div>
+        </label>
+      {% endfor %}
+
+      <div class="pt-3 border-t border-stone-200">
+        <label class="block text-xs uppercase text-stone-500 mb-1">goal (опц.)</label>
+        <input name="goal" placeholder="что хочешь от прогона"
+               class="w-full px-3 py-2 border border-stone-300 rounded text-sm">
+      </div>
+
+      <div class="flex gap-2 pt-2">
+        <button type="submit" class="bg-stone-900 text-white px-4 py-2 rounded text-sm">▶ запустить</button>
+        <button type="button" onclick="closeRunModal()" class="text-stone-500 px-4 py-2 text-sm">отмена</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function openRunModal() { document.getElementById('run-modal').classList.remove('hidden'); }
+function closeRunModal() { document.getElementById('run-modal').classList.add('hidden'); }
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeRunModal(); });
+</script>

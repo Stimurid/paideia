@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}{{ run.scenario_id }} — Paideia{% endblock %}
+{% block content %}
+
+{% if stepper %}{% include "_project_stepper.html" %}{% endif %}
+<div class="mb-4">
+  <a href="/project/{{ project_id }}/lab" class="text-stone-500 hover:text-stone-900 text-sm">← лаборатория</a>
+</div>
+
+<div class="flex items-baseline gap-3 mb-2">
+  <h1 class="text-2xl font-bold">{{ run.scenario_id }}</h1>
+  {% if run.case_param %}<span class="pill bg-stone-100">+ {{ run.case_param }}</span>{% endif %}
+  <span class="ml-auto text-stone-500 text-sm">{{ (run.duration_ms/1000)|round(1) }}s · {{ run.created_at }}</span>
+</div>
+
+{% if run.status == 'error' %}
+  <div class="bg-rose-50 border border-rose-200 rounded p-4 text-sm text-rose-700">
+    <strong>ошибка:</strong> {{ run.error }}
+  </div>
+{% else %}
+  <div class="bg-white border border-stone-200 rounded p-4 mb-4">
+    <details>
+      <summary class="cursor-pointer font-semibold">📋 JSON (полный результат)</summary>
+      <pre class="text-xs mt-3 overflow-x-auto bg-stone-50 p-3 rounded">{{ run.output_json }}</pre>
+    </details>
+  </div>
+
+  <div class="bg-white border border-stone-200 rounded p-6 text-sm">
+    {% macro render(v) -%}
+      {% if v is mapping -%}
+        <ul class="ml-4 space-y-1 list-none">
+          {%- for k, val in v.items() %}
+            <li><strong class="text-stone-700">{{ k }}:</strong> {{ render(val) }}</li>
+          {%- endfor %}
+        </ul>
+      {%- elif v is iterable and v is not string -%}
+        <ul class="ml-4 space-y-1 list-disc">
+          {%- for item in v %}<li>{{ render(item) }}</li>{%- endfor %}
+        </ul>
+      {%- else -%}
+        <span>{{ v }}</span>
+      {%- endif %}
+    {%- endmacro %}
+    {{ render(run.output) }}
+  </div>
+{% endif %}
+
+{% endblock %}

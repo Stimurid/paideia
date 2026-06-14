@@ -1,0 +1,343 @@
+{% extends "base.html" %}
+{% block title %}{{ case.name }} — Paideia{% endblock %}
+{% block content %}
+
+<div class="mb-6">
+  <a href="/" class="text-stone-500 hover:text-stone-900 text-sm">← каталог</a>
+</div>
+
+<div class="grid grid-cols-12 gap-6">
+  <div class="col-span-8">
+    <div class="flex items-start gap-4 mb-4">
+      {% if case.pattern %}<span class="pill pill-{{ case.pattern }}">{{ case.pattern }}</span>{% endif %}
+      <div>
+        <h1 class="text-2xl font-bold">{{ case.name }}</h1>
+        <div class="text-stone-500 text-sm mt-1">
+          {{ case.org_name }} · {{ case.country }} · тип {{ case.org_type }} · стадия {{ case.lifecycle_stage }}
+          {% if case.transformation_mode %} · контур: {{ case.transformation_mode }}{% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Полоса действий по канвасу -->
+    <div class="bg-stone-100 border border-stone-200 rounded p-3 mb-4 flex items-center gap-3 text-sm">
+      <span class="text-stone-600">Канвас 18 секций</span>
+      <button type="button" id="fill-all-btn" onclick="fillAllEmpty()" class="ml-auto bg-stone-900 text-stone-100 px-3 py-1.5 rounded text-xs hover:bg-stone-700">🔍 уточнить все пустые через LLM</button>
+    </div>
+    <div id="fill-all-progress" class="hidden bg-amber-50 border border-amber-200 rounded p-3 mb-4 text-sm">
+      <div class="flex items-center gap-3">
+        <span id="fill-all-current" class="font-medium">…</span>
+        <button onclick="stopFillAll()" class="ml-auto text-rose-700 hover:text-rose-900 text-xs">остановить</button>
+      </div>
+      <div class="mt-2 bg-stone-200 rounded h-2 overflow-hidden">
+        <div id="fill-all-bar" class="bg-stone-900 h-full transition-all" style="width:0%"></div>
+      </div>
+      <div id="fill-all-log" class="mt-2 text-xs text-stone-600 max-h-32 overflow-y-auto"></div>
+    </div>
+
+    <!-- Канвас из 18 секций -->
+    <div class="space-y-2 mb-8" id="canvas">
+      {% for sec_id, sec_title in canvas_sections %}
+        {% set s = canvas_data.get(sec_id) %}
+        <details class="bg-white border border-stone-200 rounded" {% if s and s.text %}open{% endif %}>
+          <summary class="cursor-pointer px-4 py-2 flex items-center gap-3 hover:bg-stone-50 select-none">
+            <span class="text-xs font-mono text-stone-400 w-6">{{ "%02d" | format(loop.index0) }}</span>
+            <span class="font-semibold text-sm">{{ sec_title }}</span>
+            {% set h = help_for("canvas_sections", sec_id) %}
+            {% if h %}{% with title=h.title, hint=h.hint, example=h.example %}{% include "_help_popover.html" %}{% endwith %}{% endif %}
+            {% if s and s.status %}
+              {% set badge_class = {'verified':'bg-emerald-100 text-emerald-700','draft':'bg-amber-100 text-amber-700','stale':'bg-rose-100 text-rose-700','empty':'bg-stone-100 text-stone-500'}.get(s.status, 'bg-stone-100 text-stone-500') %}
+              <span class="ml-auto pill {{ badge_class }}">{{ s.status }}{% if s.source %} · {{ s.source }}{% endif %}</span>
+            {% else %}
+              <span class="ml-auto pill bg-stone-100 text-stone-500">нет данных</span>
+            {% endif %}
+          </summary>
+          <div class="px-4 pb-4 pt-1 border-t border-stone-100">
+            {% if s and s.text %}
+              <div class="prose prose-sm prose-stone max-w-none whitespace-pre-line text-sm">{{ s.text }}</div>
+              <div class="flex gap-2 mt-3 text-xs">
+                <button type="button" onclick="editSection('{{ sec_id }}')" class="text-stone-500 hover:text-stone-900">✎ редактировать</button>
+                <button type="button" onclick="llmFill('{{ sec_id }}')" class="text-stone-500 hover:text-stone-900">🔍 переуточнить через LLM</button>
+                <button type="button" onclick="showHistory('{{ sec_id }}')" class="text-stone-500 hover:text-stone-900">🕘 история</button>
+              </div>
+              <div id="history-{{ sec_id }}" class="hidden mt-3 p-3 bg-stone-50 border border-stone-200 rounded text-xs"></div>
+            {% else %}
+              <p class="text-stone-400 italic text-sm mb-3">Нет данных. Можно запросить уточнение через веб-поиск или ввести руками.</p>
+              <div class="flex gap-2 flex-wrap">
+                <button type="button" onclick="llmFill('{{ sec_id }}')" class="bg-stone-900 text-stone-100 px-3 py-1.5 rounded text-xs hover:bg-stone-700">🔍 уточнить через LLM</button>
+                <button type="button" onclick="editSection('{{ sec_id }}')" class="bg-white border border-stone-300 px-3 py-1.5 rounded text-xs hover:bg-stone-50">📝 ввести вручную</button>
+              </div>
+            {% endif %}
+            <div id="editor-{{ sec_id }}" class="hidden mt-3">
+              <textarea class="w-full border border-stone-300 rounded px-2 py-1 text-sm font-mono" rows="6" id="textarea-{{ sec_id }}">{{ (s.text if s else '') or '' }}</textarea>
+              <div class="flex gap-2 mt-2">
+                <button onclick="saveSection('{{ sec_id }}')" class="bg-emerald-700 text-white px-3 py-1 rounded text-xs hover:bg-emerald-600">сохранить</button>
+                <button onclick="cancelEdit('{{ sec_id }}')" class="text-stone-500 hover:text-stone-900 text-xs">отменить</button>
+                {% if s and s.citations %}
+                  <span class="ml-auto text-xs text-stone-400">источников: {{ s.citations|length }}</span>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </details>
+      {% endfor %}
+    </div>
+  </div>
+
+  <aside class="col-span-4 space-y-5">
+    <div class="bg-white border border-stone-200 rounded p-4 text-sm">
+      <div class="font-semibold text-stone-500 uppercase tracking-wide text-xs mb-2">фасеты</div>
+      <table class="w-full text-sm">
+        <tr><td class="text-stone-500">паттерн</td><td>{{ case.pattern }}</td></tr>
+        <tr><td class="text-stone-500">агентность</td><td>{{ case.agentivity }}/6</td></tr>
+        <tr><td class="text-stone-500">оркестрация</td><td>{{ case.orchestration }}</td></tr>
+        <tr><td class="text-stone-500">педагогика</td><td>{{ case.pedagogy }}</td></tr>
+        <tr><td class="text-stone-500">контроль</td><td>{{ case.control }}</td></tr>
+        <tr><td class="text-stone-500">экономика</td><td>{{ case.economy }}</td></tr>
+      </table>
+    </div>
+
+    {% if case.links %}
+    <div class="bg-white border border-stone-200 rounded p-4 text-sm">
+      <div class="font-semibold text-stone-500 uppercase tracking-wide text-xs mb-2">связи</div>
+      <ul class="space-y-1">
+      {% for l in case.links %}
+        <li>
+          <span class="text-stone-400 text-xs uppercase">{{ l.relation }}</span>
+          {% set p = '/' + l.target_kind + '/' + l.target_id %}
+          <a class="hover:underline" href="{{ p }}">{{ l.target_kind }}:{{ l.target_id }}</a>
+          {% if l.confidence != 'medium' %}<span class="text-xs text-stone-400">({{ l.confidence }})</span>{% endif %}
+        </li>
+      {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+
+    {% if case.axes %}
+    <div class="bg-white border border-stone-200 rounded p-4 text-sm">
+      <div class="font-semibold text-stone-500 uppercase tracking-wide text-xs mb-2">оси</div>
+      {% set families = {} %}
+      {% for a in case.axes %}{% set _ = families.setdefault(a.family or 'other', []).append(a) %}{% endfor %}
+      {% for fam, axes in families.items() %}
+        <div class="font-semibold text-xs mt-2 mb-1 text-stone-700">{{ fam }}</div>
+        <ul class="space-y-0.5 text-xs">
+        {% for a in axes %}
+          <li class="flex justify-between gap-2"><span class="text-stone-500">{{ a.axis_id }}</span><span>{% if a.value_text %}{{ a.value_text }}{% else %}{{ a.value_num|int if a.value_num is not none and a.value_num == a.value_num|int else a.value_num }}{% endif %}</span></li>
+        {% endfor %}
+        </ul>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if case.sources %}
+    <div class="bg-white border border-stone-200 rounded p-4 text-sm">
+      <div class="font-semibold text-stone-500 uppercase tracking-wide text-xs mb-2">источники</div>
+      <ul class="space-y-1 text-xs">
+      {% for s in case.sources %}
+        <li><a class="text-blue-600 hover:underline break-all" href="{{ s.url }}">{{ s.url }}</a> <span class="text-stone-400">{{ s.source_type }} · {{ s.accessed_at }}</span></li>
+      {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+  </aside>
+</div>
+
+<!-- Модалка LLM-ответа -->
+<div id="llm-modal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+    <div class="p-6">
+      <div class="flex items-start justify-between mb-3">
+        <div>
+          <h3 class="font-bold text-lg">Уточнение через LLM</h3>
+          <p class="text-stone-500 text-sm" id="llm-section-name"></p>
+        </div>
+        <button onclick="closeLlm()" class="text-stone-400 hover:text-stone-900 text-xl">×</button>
+      </div>
+      <div id="llm-status" class="text-stone-500 text-sm">Запуск веб-поиска через sonar-pro…</div>
+      <div id="llm-result" class="hidden mt-4">
+        <div class="mb-3">
+          <span class="pill bg-stone-100 text-stone-700" id="llm-confidence"></span>
+          <span class="text-xs text-stone-400 ml-2" id="llm-duration"></span>
+        </div>
+        <div class="prose prose-sm max-w-none whitespace-pre-line border border-stone-200 rounded p-3 bg-stone-50" id="llm-text"></div>
+        <div class="mt-4">
+          <div class="text-xs uppercase tracking-wide text-stone-500 mb-2">источники</div>
+          <ul class="text-xs space-y-1" id="llm-citations"></ul>
+        </div>
+        <div class="mt-4" id="llm-gaps-block">
+          <div class="text-xs uppercase tracking-wide text-stone-500 mb-2">не закрыто</div>
+          <ul class="text-xs space-y-1 text-stone-600" id="llm-gaps"></ul>
+        </div>
+        <div id="llm-saved-note" class="hidden mt-4 mb-2 text-emerald-700 text-sm font-semibold">✓ автоматически сохранено как draft</div>
+        <div class="flex gap-2 mt-6">
+          <button id="llm-accept" class="bg-emerald-700 text-white px-4 py-2 rounded text-sm hover:bg-emerald-600">оставить и закрыть</button>
+          <button id="llm-edit" class="bg-white border border-stone-300 px-4 py-2 rounded text-sm hover:bg-stone-50">редактировать</button>
+          <button id="llm-revert" class="bg-white border border-rose-300 text-rose-700 px-4 py-2 rounded text-sm hover:bg-rose-50">откатить</button>
+          <button onclick="closeLlm()" class="ml-auto text-stone-500 hover:text-stone-900 text-sm">закрыть без изменений</button>
+        </div>
+      </div>
+      <div id="llm-error" class="hidden mt-4 text-rose-600 text-sm"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const CASE_ID = {{ case.id | tojson }};
+const SECTION_TITLES = {{ section_titles | tojson }};
+
+function editSection(sid) {
+  document.getElementById('editor-' + sid).classList.remove('hidden');
+}
+function cancelEdit(sid) {
+  document.getElementById('editor-' + sid).classList.add('hidden');
+}
+async function saveSection(sid) {
+  const text = document.getElementById('textarea-' + sid).value;
+  const r = await fetch(`/api/case/${CASE_ID}/canvas/${sid}/save`, {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({text, source: 'manual', status: 'draft'}),
+  });
+  if (r.ok) location.reload(); else alert('save failed: ' + await r.text());
+}
+
+let currentSection = null;
+let currentResult = null;
+async function llmFill(sid) {
+  currentSection = sid;
+  document.getElementById('llm-modal').classList.remove('hidden');
+  document.getElementById('llm-section-name').textContent = SECTION_TITLES[sid] || sid;
+  document.getElementById('llm-status').classList.remove('hidden');
+  document.getElementById('llm-result').classList.add('hidden');
+  document.getElementById('llm-error').classList.add('hidden');
+  try {
+    const r = await fetch(`/api/case/${CASE_ID}/canvas/${sid}/llm-fill`, {method: 'POST'});
+    if (!r.ok) throw new Error(await r.text());
+    const data = await r.json();
+    currentResult = data;
+    document.getElementById('llm-status').classList.add('hidden');
+    document.getElementById('llm-result').classList.remove('hidden');
+    document.getElementById('llm-confidence').textContent = 'confidence: ' + (data.confidence || '?');
+    document.getElementById('llm-duration').textContent = (data.duration_ms / 1000).toFixed(1) + 's · ' + (data.model_role || 'search');
+    document.getElementById('llm-text').textContent = data.text || '';
+    const cit = document.getElementById('llm-citations');
+    cit.innerHTML = '';
+    (data.citations || []).forEach(u => {
+      const li = document.createElement('li');
+      li.innerHTML = `<a class="text-blue-600 hover:underline break-all" href="${u}" target="_blank">${u}</a>`;
+      cit.appendChild(li);
+    });
+    const gapsBlock = document.getElementById('llm-gaps-block');
+    const gapsList = document.getElementById('llm-gaps');
+    gapsList.innerHTML = '';
+    if (data.open_gaps && data.open_gaps.length) {
+      data.open_gaps.forEach(g => {
+        const li = document.createElement('li');
+        li.textContent = '• ' + g;
+        gapsList.appendChild(li);
+      });
+      gapsBlock.classList.remove('hidden');
+    } else gapsBlock.classList.add('hidden');
+    if (data.auto_saved) {
+      document.getElementById('llm-saved-note').classList.remove('hidden');
+    }
+  } catch (e) {
+    document.getElementById('llm-status').classList.add('hidden');
+    const err = document.getElementById('llm-error');
+    err.textContent = 'ошибка: ' + e.message;
+    err.classList.remove('hidden');
+  }
+}
+function closeLlm() {
+  document.getElementById('llm-modal').classList.add('hidden');
+  currentSection = null; currentResult = null;
+}
+// результат уже автосохранён на сервере — кнопка просто закрывает модалку и перезагружает
+document.getElementById('llm-accept').addEventListener('click', () => location.reload());
+async function showHistory(sid) {
+  const box = document.getElementById('history-' + sid);
+  if (!box.classList.contains('hidden')) { box.classList.add('hidden'); return; }
+  box.classList.remove('hidden');
+  box.innerHTML = 'загружаю…';
+  try {
+    const r = await fetch(`/api/case/${CASE_ID}/canvas/${sid}/history?limit=20`);
+    const d = await r.json();
+    if (d.note) { box.innerHTML = '<i>'+d.note+'</i>'; return; }
+    if (!d.commits || !d.commits.length) { box.innerHTML = '<i>нет коммитов</i>'; return; }
+    box.innerHTML = '<table class="w-full"><thead><tr><th class="text-left">sha</th><th class="text-left">дата</th><th class="text-left">сообщение</th><th></th></tr></thead><tbody>' +
+      d.commits.map(c => `<tr class="${c.section_relevant?'bg-amber-50':''}">
+        <td class="font-mono text-stone-500">${c.sha}</td>
+        <td class="text-stone-500">${c.date.slice(0,16)}</td>
+        <td>${c.message}</td>
+        <td><button onclick="loadVersion('${sid}','${c.sha}')" class="text-blue-600 hover:underline">показать</button></td>
+      </tr>`).join('') + '</tbody></table><div id="ver-'+sid+'" class="mt-2"></div>';
+  } catch(e) { box.innerHTML = 'ошибка: '+e.message; }
+}
+async function loadVersion(sid, sha) {
+  const ver = document.getElementById('ver-' + sid);
+  ver.innerHTML = '...';
+  try {
+    const r = await fetch(`/api/case/${CASE_ID}/canvas/${sid}/version/${sha}`);
+    const d = await r.json();
+    ver.innerHTML = `<div class="bg-white p-2 border border-stone-200 rounded mt-2">
+      <div class="text-xs text-stone-500 mb-1">${sha} · ${d.updated_at||''} · ${d.source||'?'}</div>
+      <pre class="whitespace-pre-wrap text-xs">${(d.text||'(пусто в этой версии)').replace(/</g,'&lt;')}</pre>
+    </div>`;
+  } catch(e) { ver.innerHTML = 'ошибка: '+e.message; }
+}
+document.getElementById('llm-edit').addEventListener('click', () => {
+  if (!currentResult || !currentSection) return;
+  closeLlm();
+  document.getElementById('textarea-' + currentSection).value = currentResult.text;
+  editSection(currentSection);
+});
+// --- Пакетная заливка всех пустых секций ---
+let fillAllCancelled = false;
+async function fillAllEmpty() {
+  const r = await fetch(`/api/case/${CASE_ID}/canvas/empty-sections`);
+  if (!r.ok) { alert('failed to load empty sections'); return; }
+  const {empty} = await r.json();
+  if (!empty.length) { alert('все секции уже заполнены'); return; }
+  if (!confirm(`Запустить sonar-pro по ${empty.length} пустым секциям? Каждая занимает ~10-20 секунд. Итого ~${Math.ceil(empty.length*15/60)} минут.`)) return;
+  fillAllCancelled = false;
+  document.getElementById('fill-all-btn').disabled = true;
+  document.getElementById('fill-all-progress').classList.remove('hidden');
+  const bar = document.getElementById('fill-all-bar');
+  const cur = document.getElementById('fill-all-current');
+  const log = document.getElementById('fill-all-log');
+  let ok = 0, fail = 0;
+  for (let i = 0; i < empty.length; i++) {
+    if (fillAllCancelled) break;
+    const sec = empty[i];
+    cur.textContent = `${i+1}/${empty.length} — ${sec.title}`;
+    bar.style.width = ((i)/empty.length*100).toFixed(1) + '%';
+    try {
+      const fr = await fetch(`/api/case/${CASE_ID}/canvas/${sec.id}/llm-fill`, {method:'POST'});
+      if (fr.ok) {
+        const d = await fr.json();
+        const len = (d.text||'').length;
+        log.innerHTML = `<div class="text-emerald-700">✓ ${sec.title} — ${len} симв, ${(d.citations||[]).length} ист.</div>` + log.innerHTML;
+        ok++;
+      } else {
+        log.innerHTML = `<div class="text-rose-700">✗ ${sec.title} — ${fr.status}</div>` + log.innerHTML;
+        fail++;
+      }
+    } catch (e) {
+      log.innerHTML = `<div class="text-rose-700">✗ ${sec.title} — ${e.message}</div>` + log.innerHTML;
+      fail++;
+    }
+  }
+  bar.style.width = '100%';
+  cur.textContent = `готово · ✓ ${ok} · ✗ ${fail}` + (fillAllCancelled ? ' · отменено' : '');
+  setTimeout(() => location.reload(), 1500);
+}
+function stopFillAll() { fillAllCancelled = true; }
+
+document.getElementById('llm-revert').addEventListener('click', async () => {
+  if (!currentSection) return;
+  if (!confirm('Откатить секцию обратно в «нет данных»?')) return;
+  const r = await fetch(`/api/case/${CASE_ID}/canvas/${currentSection}/revert`, {method: 'POST'});
+  if (r.ok) location.reload(); else alert('revert failed: ' + await r.text());
+});
+</script>
+
+{% endblock %}

@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Волны — Paideia{% endblock %}
+{% block content %}
+
+<div class="mb-6"><a href="/" class="text-stone-500 hover:text-stone-900 text-sm">← каталог</a></div>
+
+<h1 class="text-2xl font-bold mb-2">Мониторинг</h1>
+<p class="text-stone-500 mb-6 text-sm">Дифф-прогон корпуса за период: новые кейсы, сдвиги фасетов, новые контр-сигналы, обновления гипотез. Каждый запуск = одна «волна» в архиве.</p>
+
+<form id="run-form" class="bg-white border border-stone-200 rounded p-4 mb-6 grid grid-cols-4 gap-3">
+  <div>
+    <label class="block text-xs uppercase tracking-wide text-stone-500 mb-1">с (YYYY-MM)</label>
+    <input id="from" required placeholder="2026-04" class="w-full px-2 py-1 border border-stone-300 rounded font-mono text-sm">
+  </div>
+  <div>
+    <label class="block text-xs uppercase tracking-wide text-stone-500 mb-1">по (YYYY-MM)</label>
+    <input id="to" required placeholder="2026-06" class="w-full px-2 py-1 border border-stone-300 rounded font-mono text-sm">
+  </div>
+  <div>
+    <label class="block text-xs uppercase tracking-wide text-stone-500 mb-1">режим</label>
+    <select id="depth" class="w-full px-2 py-1 border border-stone-300 rounded text-sm">
+      <option value="quick">quick · 1 запрос (~10 с)</option>
+      <option value="standard" selected>standard · 4 запроса + синтез (~60 с)</option>
+      <option value="deep">deep · 8 запросов + синтез + перепроверка (~3 мин)</option>
+    </select>
+  </div>
+  <div>
+    <label class="block text-xs uppercase tracking-wide text-stone-500 mb-1">фокус</label>
+    <input id="focus" placeholder="agentivity 3+ в US" class="w-full px-2 py-1 border border-stone-300 rounded text-sm">
+  </div>
+  <div class="col-span-4 flex gap-3 items-center">
+    <button class="bg-stone-900 text-stone-100 px-4 py-2 rounded text-sm hover:bg-stone-700">запустить волну</button>
+    <span id="run-status" class="text-stone-500 text-sm"></span>
+  </div>
+</form>
+
+<h2 class="text-lg font-bold mb-3">Архив волн ({{ waves|length }})</h2>
+{% if waves %}
+<ul class="space-y-2">
+  {% for w in waves %}
+    <li class="bg-white border border-stone-200 rounded p-3 flex items-center gap-3">
+      <span class="font-mono text-sm">{{ w.id }}</span>
+      <span class="text-stone-400 text-xs">{{ w.size_kb }} KB</span>
+      <a href="/wave/{{ w.id }}" class="ml-auto text-blue-600 hover:underline text-sm">открыть →</a>
+    </li>
+  {% endfor %}
+</ul>
+{% else %}
+  <p class="text-stone-500 italic">пока нет ни одной волны — запусти первую</p>
+{% endif %}
+
+<script>
+document.getElementById('run-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const window_from = document.getElementById('from').value.trim();
+  const window_to = document.getElementById('to').value.trim();
+  const focus = document.getElementById('focus').value.trim() || null;
+  const depth = document.getElementById('depth').value;
+  const status = document.getElementById('run-status');
+  const eta = {quick: '~10 с', standard: '~60 с', deep: '~3 мин'}[depth];
+  status.textContent = `🔍 режим ${depth} · ${eta}…`;
+  try {
+    const r = await fetch('/api/run-wave', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({window_from, window_to, focus, depth}),
+    });
+    if (!r.ok) throw new Error(await r.text());
+    const data = await r.json();
+    status.innerHTML = `<span class="text-emerald-700">готово: <a class="underline" href="/wave/${data.wave_id}">${data.wave_id}</a></span>`;
+    setTimeout(() => location.reload(), 1500);
+  } catch (err) {
+    status.textContent = 'ошибка: ' + err.message;
+  }
+});
+</script>
+{% endblock %}

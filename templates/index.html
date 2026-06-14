@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}Paideia — каталог{% endblock %}
+{% block content %}
+
+<div class="grid grid-cols-12 gap-6">
+
+  <aside class="col-span-3 space-y-5">
+    <form method="get" action="/" class="space-y-3">
+      <div>
+        <label class="block text-xs uppercase tracking-wide text-stone-500 mb-1">поиск</label>
+        <input name="q" value="{{ query.q }}" class="w-full px-3 py-2 border border-stone-300 rounded" placeholder="tutor, sandbox, agent…">
+      </div>
+
+      {% macro select_facet(name, options, current) %}
+        <div>
+          <label class="block text-xs uppercase tracking-wide text-stone-500 mb-1">{{ name }}</label>
+          <select name="{{ name }}" class="w-full px-2 py-1 border border-stone-300 rounded text-sm">
+            <option value="">— любое —</option>
+            {% for opt in options %}
+              <option value="{{ opt }}" {% if current == opt %}selected{% endif %}>{{ opt }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      {% endmacro %}
+
+      {{ select_facet("pattern",            facets.pattern,            query.pattern) }}
+      {{ select_facet("country",            facets.country,            query.country) }}
+      {{ select_facet("orchestration",      facets.orchestration,      query.orchestration) }}
+      {{ select_facet("pedagogy",           facets.pedagogy,           query.pedagogy) }}
+      {{ select_facet("control",            facets.control,            query.control) }}
+      {{ select_facet("lifecycle_stage",    facets.lifecycle_stage,    query.lifecycle_stage) }}
+      {{ select_facet("transformation_mode", facets.transformation_mode, query.transformation_mode) }}
+
+      <div class="grid grid-cols-2 gap-2">
+        <div>
+          <label class="block text-xs uppercase tracking-wide text-stone-500 mb-1">agentivity ≥</label>
+          <input name="agentivity_min" type="number" min="0" max="6" value="{{ query.agentivity_min or '' }}" class="w-full px-2 py-1 border border-stone-300 rounded text-sm">
+        </div>
+        <div>
+          <label class="block text-xs uppercase tracking-wide text-stone-500 mb-1">agentivity ≤</label>
+          <input name="agentivity_max" type="number" min="0" max="6" value="{{ query.agentivity_max or '' }}" class="w-full px-2 py-1 border border-stone-300 rounded text-sm">
+        </div>
+      </div>
+
+      <button class="w-full bg-stone-900 text-stone-100 py-2 rounded hover:bg-stone-700">фильтровать</button>
+      <a href="/" class="block text-center text-xs text-stone-500 hover:text-stone-900">сбросить</a>
+    </form>
+
+    <div class="border-t pt-4 text-xs space-y-3">
+      <div>
+        <div class="font-semibold text-stone-500 uppercase tracking-wide mb-1">Типы A–F</div>
+        <ul>{% for t in theory.types %}<li><a class="hover:underline" href="/type/{{ t.id }}"><span class="pill pill-{{ t.id }}">{{ t.id }}</span> {{ t.name }}</a></li>{% endfor %}</ul>
+      </div>
+      <div>
+        <div class="font-semibold text-stone-500 uppercase tracking-wide mb-1">Гипотезы H1–H5</div>
+        <ul>{% for h in theory.hypotheses %}<li><a class="hover:underline" href="/hypothesis/{{ h.id }}">{{ h.id }} · {{ h.name }} <span class="text-stone-400">({{ h.status_current }})</span></a></li>{% endfor %}</ul>
+      </div>
+      <div>
+        <div class="font-semibold text-stone-500 uppercase tracking-wide mb-1">Противоречия</div>
+        <ul>{% for t in theory.tensions %}<li><a class="hover:underline" href="/tension/{{ t.id }}">{{ t.name }}</a></li>{% endfor %}</ul>
+      </div>
+      <div>
+        <div class="font-semibold text-stone-500 uppercase tracking-wide mb-1">Моды</div>
+        <ul>{% for m in theory.modes %}<li><a class="hover:underline" href="/mode/{{ m.id }}">{{ m.name }}</a></li>{% endfor %}</ul>
+      </div>
+      <div>
+        <div class="font-semibold text-stone-500 uppercase tracking-wide mb-1">Контр-сигналы</div>
+        <ul>{% for c in theory.counter_signals %}<li><a class="hover:underline" href="/counter-signal/{{ c.id }}">{{ c.name }}</a></li>{% endfor %}</ul>
+      </div>
+    </div>
+  </aside>
+
+  <section class="col-span-9">
+    <div class="flex items-center justify-between mb-4">
+      <h1 class="text-2xl font-bold">Кейсы <span class="text-stone-400 text-base font-normal">{{ results|length }}</span></h1>
+      <div class="ml-auto flex gap-2 text-sm">
+        <a href="/catalog" class="px-3 py-1 bg-stone-900 text-stone-100 rounded">📋 список</a>
+        <a href="/map" class="px-3 py-1 bg-white border border-stone-300 rounded hover:bg-stone-50">🗺 карта</a>
+      </div>
+    </div>
+    <ul class="space-y-2">
+      {% for r in results %}
+        <li class="bg-white border border-stone-200 rounded p-4 hover:shadow">
+          <div class="flex items-start gap-3">
+            <div class="w-12 flex-shrink-0 text-center">
+              {% if r.pattern %}<span class="pill pill-{{ r.pattern }}">{{ r.pattern }}</span>{% else %}<span class="pill pill-gray">?</span>{% endif %}
+              <div class="text-xs text-stone-500 mt-1">a{{ r.agentivity if r.agentivity is not none else "?" }}</div>
+            </div>
+            <div class="flex-1">
+              <a href="/case/{{ r.id }}" class="font-semibold hover:underline">{{ r.name }}</a>
+              <div class="text-xs text-stone-500 flex gap-3 mt-1">
+                <span>{{ r.org_name }}</span>
+                <span class="text-stone-400">·</span>
+                <span>{{ r.country }} · {{ r.org_type }}</span>
+                {% if r.orchestration %}<span class="text-stone-400">·</span><span>orch:{{ r.orchestration }}</span>{% endif %}
+                {% if r.transformation_mode %}<span class="text-stone-400">·</span><span>{{ r.transformation_mode }}</span>{% endif %}
+                <span class="text-stone-400">·</span><span>{{ r.lifecycle_stage }}</span>
+                {% if not r.verified %}<span class="pill pill-gray">unverified</span>{% endif %}
+              </div>
+            </div>
+          </div>
+        </li>
+      {% else %}
+        <li class="text-stone-500 italic">ничего не найдено</li>
+      {% endfor %}
+    </ul>
+  </section>
+
+</div>
+{% endblock %}

@@ -1,0 +1,67 @@
+# Типология преподавателей (из электривного промпта + UI_CONSTITUTION).
+# Каждый тип = свой entry route в визард.
+
+teacher_types:
+  - id: clear-intent
+    name: "Чёткий замысел"
+    description: "Уже знаю что хочу — нужно оформить точнее"
+    entry_route: "Existing system evolution"
+    first_questions:
+      - "Опиши свой замысел в 2-3 предложениях"
+      - "Что в твоём замысле уже работало? Что нет?"
+      - "Какой формат соответствует?"
+    skip_to_sections: [function, dolzhno, transmission]
+
+  - id: felt-experience
+    name: "Ощущение опыта"
+    description: "Хочу передать опыт, но не знаю как"
+    entry_route: "Impossible dream / task-limit"
+    first_questions:
+      - "Какой опыт ты хочешь чтобы случился со студентом?"
+      - "Что в твоей практике дало тебе самому этот опыт?"
+      - "Что должно измениться в студенте?"
+    skip_to_sections: [function, dano, working_organ]
+
+  - id: many-ideas
+    name: "Много идей"
+    description: "Нужны идеи для команды/студентов"
+    entry_route: "Generation of options"
+    first_questions:
+      - "В каком пространстве деятельности работаем?"
+      - "Какие ограничения уже известны?"
+      - "Какой инструмент сейчас под рукой?"
+    skip_to_sections: [function, transmission, mutations]
+    suggest_kosmos: true
+
+  - id: unclear-purpose
+    name: "Не осознаю смысл"
+    description: "Курс есть, но не понимаю зачем он"
+    entry_route: "Reverse — backward design"
+    first_questions:
+      - "Если выпускник через 3 года скажет «это был лучший курс» — что он будет делать?"
+      - "Что меняется в нём после курса?"
+      - "Кому он становится нужнее?"
+    skip_to_sections: [dolzhno, function]
+    suggest_run: outcome-inverter
+
+  - id: afraid-too-much
+    name: "Боюсь сложности / пустоты"
+    description: "Боюсь что будет слишком сложно или слишком пусто"
+    entry_route: "Calibration"
+    first_questions:
+      - "Какой студент уже не сможет учиться (слишком сложно)?"
+      - "Какой студент уже не получит вызова (слишком просто)?"
+      - "Где сейчас твой типичный студент?"
+    skip_to_sections: [dano, contradictions]
+    suggest_run: stakeholder_pressure
+
+  - id: existing-course-review
+    name: "Проверка существующего"
+    description: "Хочу перепроверить курс который уже идёт"
+    entry_route: "Existing system evolution"
+    first_questions:
+      - "Что в курсе работает? Что не работает?"
+      - "Что изменилось в контексте за последний год?"
+      - "Какие сигналы недовольства/радости получал?"
+    skip_to_sections: [dano, evolution_pressure, contradictions]
+    suggest_run: anti_washing

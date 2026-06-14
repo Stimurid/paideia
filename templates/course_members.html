@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}Участники {{ course.name }}{% endblock %}
+{% block content %}
+
+<div class="mb-4 flex items-baseline gap-2 flex-wrap text-sm">
+  <a href="/courses" class="text-stone-500 hover:text-stone-900">курсы</a>
+  <span class="text-stone-300">/</span>
+  <a href="/course/{{ course.id }}" class="text-stone-500 hover:text-stone-900">{{ course.name }}</a>
+  <span class="text-stone-300">/</span>
+  <h1 class="text-lg font-bold">👥 Участники и их работы</h1>
+</div>
+
+{% set art_icons = {
+  'homework_submission': '📥', 'student_question': '❓',
+  'chat_export': '💭', 'exam_response': '📤', 'notes': '✏️'
+} %}
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+  <div class="bg-stone-100 border border-stone-200 rounded p-3 text-sm">
+    <div class="text-xs uppercase text-stone-500">role-bindings</div>
+    <div class="text-2xl font-bold">{{ bindings | length }}</div>
+  </div>
+  <div class="bg-stone-100 border border-stone-200 rounded p-3 text-sm">
+    <div class="text-xs uppercase text-stone-500">уникальные ники</div>
+    <div class="text-2xl font-bold">{{ by_nick | length }}</div>
+  </div>
+  <div class="bg-stone-100 border border-stone-200 rounded p-3 text-sm">
+    <div class="text-xs uppercase text-stone-500">сданные артефакты</div>
+    <div class="text-2xl font-bold">{{ total_artifacts }}</div>
+  </div>
+</div>
+
+<!-- Role-bindings -->
+<h2 class="font-bold mb-2 text-sm uppercase tracking-wide text-stone-600">Привязки сессий к ролям</h2>
+{% if bindings %}
+  <ul class="bg-white border border-stone-200 rounded mb-6 divide-y divide-stone-100">
+    {% for b in bindings %}
+      <li class="px-3 py-2 text-sm flex items-baseline gap-3">
+        <code class="text-xs text-stone-500">{{ b.session_id[:18] if b.session_id else '?' }}…</code>
+        <span class="pill bg-violet-100 text-violet-700">{{ b.role }}</span>
+        <span class="text-xs text-stone-400 ml-auto">{{ b.created_at[:16] }}</span>
+      </li>
+    {% endfor %}
+  </ul>
+{% else %}
+  <div class="bg-stone-50 border border-stone-200 rounded p-3 mb-6 text-sm text-stone-500 italic">
+    Никто не привязан к курсу. Привязка появляется автоматически при создании курса (роль author)
+    или вручную через API.
+  </div>
+{% endif %}
+
+<!-- Студенческие работы по ученикам -->
+<h2 class="font-bold mb-2 text-sm uppercase tracking-wide text-stone-600">Работы по участникам</h2>
+{% if by_nick %}
+  <div class="space-y-4">
+    {% for nick, arts in by_nick.items() %}
+      <div class="bg-white border-l-4 border-emerald-500 rounded-r-lg p-4">
+        <div class="flex items-baseline gap-3 mb-3">
+          <strong class="text-lg">🎒 {{ nick }}</strong>
+          <span class="text-xs text-stone-500">{{ arts | length }} работ</span>
+        </div>
+        <ul class="space-y-2 text-sm">
+          {% for a in arts %}
+            <li class="border-l-2 border-emerald-200 pl-3">
+              <div class="flex items-baseline gap-2 flex-wrap">
+                <span>{{ art_icons.get(a.kind, '•') }}</span>
+                <span class="text-xs uppercase text-stone-500">{{ a.kind }}</span>
+                {% if a.title %}<strong>{{ a.title }}</strong>{% endif %}
+                <a href="/course/{{ course.id }}/event/{{ a.event_id }}"
+                   class="text-xs text-violet-700 hover:underline">
+                  {{ a.event_kind }}: {{ a.event_title or '(без названия)' }}
+                </a>
+                <span class="text-xs text-stone-400 ml-auto">{{ a.created_at[:16] }}</span>
+              </div>
+              {% if a.body_md %}
+                <div class="text-xs text-stone-700 mt-1">{{ a.body_md[:200] }}{% if a.body_md | length > 200 %}…{% endif %}</div>
+              {% endif %}
+              {% if a.in_response_to %}
+                <div class="text-xs text-stone-400 mt-1">↳ на бриф <code>{{ a.in_response_to }}</code></div>
+              {% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="bg-stone-50 border border-stone-200 rounded p-6 text-center text-stone-500 text-sm">
+    Студенческих работ пока нет. Они появляются при добавлении артефактов в правую колонку «От студентов»
+    на странице события.
+  </div>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,142 @@
+{# Cmd+K command palette. Подключается из base.html в конец body. #}
+<div id="cmdk-backdrop" class="hidden fixed inset-0 bg-black/40 z-50" onclick="closeCmdk()"></div>
+<div id="cmdk-panel" class="hidden fixed top-24 left-1/2 -translate-x-1/2 z-50
+                           bg-white rounded-lg shadow-2xl w-[640px] max-w-[92vw]">
+  <input id="cmdk-input" type="text" autofocus placeholder="🔍 Перейти / запустить агента / найти кейс..."
+         class="w-full px-5 py-4 text-base border-b border-stone-200 focus:outline-none rounded-t-lg">
+  <div id="cmdk-results" class="max-h-[480px] overflow-y-auto">
+    <div class="px-5 py-6 text-stone-400 text-sm text-center">начни печатать...</div>
+  </div>
+  <div class="border-t border-stone-200 px-4 py-2 text-xs text-stone-400 flex gap-4">
+    <span>↑↓ — навигация</span><span>↵ — открыть</span><span>esc — закрыть</span>
+  </div>
+</div>
+
+<script>
+const CMDK_ITEMS = (() => {
+  const projects = {{ cmdk_projects | tojson if cmdk_projects is defined else "[]" }};
+  const nav = [
+    {kind: 'nav', icon: '📋', label: 'Каталог корпуса (118 кейсов)', url: '/catalog'},
+    {kind: 'nav', icon: '🗺', label: 'Карта корпуса', url: '/map'},
+    {kind: 'nav', icon: '🎯', label: 'Подбор аналогов', url: '/match'},
+    {kind: 'nav', icon: '📚', label: 'Теория (типы/гипотезы/противоречия)', url: '/theory'},
+    {kind: 'nav', icon: '⚡', label: '40 ТРИЗ-приёмов', url: '/methods'},
+    {kind: 'nav', icon: '📥', label: 'Импорт URL/файла', url: '/import'},
+    {kind: 'nav', icon: '📡', label: 'Мониторинг волн', url: '/waves'},
+    {kind: 'nav', icon: '📦', label: 'Архив RAG', url: '/archive'},
+    {kind: 'nav', icon: '🧭', label: '+ новый проект (визард)', url: '/project/new/wizard'},
+    {kind: 'nav', icon: '💼', label: 'Мои проекты', url: '/projects'},
+    {kind: 'nav', icon: '⚙️', label: 'Сервисный режим', url: '/service'},
+    {kind: 'nav', icon: '📊', label: 'LLM-аудит', url: '/llm-runs'},
+    {kind: 'nav', icon: '⚒️', label: 'Agent Foundry', url: '/foundry'},
+  ];
+  const projItems = projects.map(p => ({
+    kind: 'project', icon: '💼', label: `Проект: ${p.name}`,
+    url: `/project/${p.id}/dashboard`,
+  }));
+  const profileNames = [
+    ['kosmos','🌌','KOSMOS · 6 альтернатив'],
+    ['stakeholder_pressure','🎭','Stakeholder Pressure · обстрел 7 ролями'],
+    ['semester_sim','📅','Semester Simulator · по неделям'],
+    ['anti_washing','🔬','Anti-Agent-Washing · скоринг агентности'],
+    ['time_machine','🕰','Time Machine · через 5 лет'],
+    ['genealogy','🌳','Genealogy · родители/дети'],
+    ['counter_corpus','💀','Counter-corpus · обстрел провалами'],
+    ['hypothesis_forge','🔨','Hypothesis Forge · H6+'],
+    ['export_rpd','📄','Export РПД'],
+    ['default','🤖','Default · базовый аудит'],
+  ];
+  const runItems = projects.flatMap(p =>
+    profileNames.map(([pid, icon, name]) => ({
+      kind: 'run', icon, label: `Запустить ${name} на «${p.name}»`,
+      action: 'run', profile: pid, project_id: p.id,
+    }))
+  );
+  return [...nav, ...projItems, ...runItems];
+})();
+
+let cmdkOpen = false;
+let cmdkSelected = 0;
+let cmdkFiltered = [];
+
+function openCmdk() {
+  cmdkOpen = true;
+  document.getElementById('cmdk-backdrop').classList.remove('hidden');
+  document.getElementById('cmdk-panel').classList.remove('hidden');
+  const input = document.getElementById('cmdk-input');
+  input.value = ''; cmdkSelected = 0;
+  setTimeout(() => input.focus(), 50);
+  cmdkRender('');
+}
+function closeCmdk() {
+  cmdkOpen = false;
+  document.getElementById('cmdk-backdrop').classList.add('hidden');
+  document.getElementById('cmdk-panel').classList.add('hidden');
+}
+
+function cmdkRender(q) {
+  q = (q || '').trim().toLowerCase();
+  cmdkFiltered = q
+    ? CMDK_ITEMS.filter(it => it.label.toLowerCase().includes(q))
+    : CMDK_ITEMS.slice(0, 30);
+  cmdkSelected = Math.min(cmdkSelected, Math.max(0, cmdkFiltered.length - 1));
+  const box = document.getElementById('cmdk-results');
+  if (!cmdkFiltered.length) {
+    box.innerHTML = '<div class="px-5 py-6 text-stone-400 text-sm">ничего не найдено</div>';
+    return;
+  }
+  box.innerHTML = cmdkFiltered.map((it, i) => `
+    <div class="cmdk-row flex items-center gap-3 px-5 py-2 cursor-pointer ${i===cmdkSelected?'bg-violet-100':''}" data-idx="${i}">
+      <span class="text-lg">${it.icon}</span>
+      <span class="flex-1 text-sm">${it.label}</span>
+      <span class="text-xs text-stone-400">${it.kind}</span>
+    </div>
+  `).join('');
+  box.querySelectorAll('.cmdk-row').forEach(row => {
+    row.addEventListener('click', () => cmdkExecute(parseInt(row.dataset.idx)));
+    row.addEventListener('mouseenter', () => {
+      cmdkSelected = parseInt(row.dataset.idx);
+      box.querySelectorAll('.cmdk-row').forEach((r,i)=>r.classList.toggle('bg-violet-100', i===cmdkSelected));
+    });
+  });
+}
+
+function cmdkExecute(idx) {
+  const it = cmdkFiltered[idx];
+  if (!it) return;
+  if (it.action === 'run') {
+    // POST на endpoint запуска
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = `/api/project/${it.project_id}/agent-run/start`;
+    form.innerHTML = `<input name="profile" value="${it.profile}"><input name="space_id" value=""><input name="goal" value="cmdk">`;
+    document.body.appendChild(form);
+    form.submit();
+  } else if (it.url) {
+    window.location.href = it.url;
+  }
+}
+
+document.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+    e.preventDefault();
+    cmdkOpen ? closeCmdk() : openCmdk();
+    return;
+  }
+  if (!cmdkOpen) return;
+  if (e.key === 'Escape') { closeCmdk(); return; }
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    cmdkSelected = Math.min(cmdkSelected + 1, cmdkFiltered.length - 1);
+    document.querySelectorAll('.cmdk-row').forEach((r,i)=>r.classList.toggle('bg-violet-100', i===cmdkSelected));
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    cmdkSelected = Math.max(cmdkSelected - 1, 0);
+    document.querySelectorAll('.cmdk-row').forEach((r,i)=>r.classList.toggle('bg-violet-100', i===cmdkSelected));
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    cmdkExecute(cmdkSelected);
+  }
+});
+document.getElementById('cmdk-input').addEventListener('input', e => cmdkRender(e.target.value));
+</script>

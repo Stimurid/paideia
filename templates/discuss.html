@@ -1,0 +1,368 @@
+{% extends "base.html" %}
+{% block title %}{{ session.title or '∇Discuss' }} — Paideia{% endblock %}
+{% block content %}
+
+<style>
+  /* Особый дизайн дискуссии — серьёзный, тёмные акценты, серифный шрифт у бота */
+  .kai-page { display: grid; grid-template-columns: 1fr 320px; gap: 18px; min-height: 75vh; }
+  @media (max-width: 1024px) { .kai-page { grid-template-columns: 1fr; } }
+
+  .kai-chat {
+    background: linear-gradient(180deg, #fafaf9 0%, #f5f3ee 100%);
+    border: 1px solid #e7e5e4; border-radius: 14px;
+    padding: 18px; display: flex; flex-direction: column;
+    min-height: 70vh;
+  }
+  .kai-msg-list { flex: 1; overflow-y: auto; padding-right: 8px; }
+  .kai-msg { margin-bottom: 18px; max-width: 90%; }
+  .kai-msg-user {
+    margin-left: auto;
+    background: white; border: 1px solid #e7e5e4; border-radius: 14px 14px 4px 14px;
+    padding: 10px 14px; font-size: 14px;
+  }
+  .kai-msg-bot {
+    font-family: 'Georgia', 'Times New Roman', serif;
+    background: linear-gradient(180deg, #1c1525 0%, #0f0a18 100%);
+    color: #e8e6f3; border-left: 3px solid #a78bfa;
+    border-radius: 4px 14px 14px 14px;
+    padding: 16px 20px; font-size: 15px; line-height: 1.7;
+    box-shadow: 0 4px 12px -4px rgba(80, 40, 160, 0.2);
+  }
+  .kai-msg-bot::before {
+    content: "∇"; color: #a78bfa; font-size: 1.1rem; margin-right: 6px;
+    font-family: sans-serif;
+  }
+  .kai-msg-bot p { margin-bottom: 0.7em; }
+  .kai-msg-meta { font-size: 10px; color: #a8a29e; margin-top: 4px; }
+
+  .kai-input-row {
+    border-top: 1px solid #e7e5e4; padding-top: 12px; margin-top: 12px;
+    display: flex; gap: 8px;
+  }
+  .kai-input {
+    flex: 1; border: 1px solid #d6d3d1; border-radius: 8px;
+    padding: 10px 12px; font-size: 14px; resize: none;
+    font-family: inherit;
+  }
+  .kai-input:focus { outline: none; border-color: #a78bfa; box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.1); }
+  .kai-send {
+    background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%);
+    color: white; padding: 0 20px; border-radius: 8px; font-weight: 600;
+  }
+  .kai-send:disabled { opacity: 0.5; }
+
+  /* Панель управления — пульт */
+  .kai-panel {
+    background: white; border: 1px solid #e7e5e4; border-radius: 14px;
+    padding: 14px; font-size: 13px;
+    align-self: start; position: sticky; top: 70px;
+    max-height: calc(100vh - 90px); overflow-y: auto;
+  }
+  .kai-section-title {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em;
+    color: #78716c; font-weight: 700; margin: 14px 0 6px;
+  }
+  .kai-section-title:first-child { margin-top: 0; }
+  .goal-chip, .preset-chip {
+    display: inline-block; padding: 4px 8px; margin: 2px;
+    border: 1px solid #d6d3d1; border-radius: 999px; font-size: 11px;
+    cursor: pointer; transition: all .12s; user-select: none;
+    background: white;
+  }
+  .goal-chip:hover, .preset-chip:hover { border-color: #a78bfa; }
+  .goal-chip.active, .preset-chip.active {
+    background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%);
+    color: white; border-color: transparent;
+  }
+  .crit-bar { display: flex; gap: 2px; }
+  .crit-step {
+    flex: 1; padding: 4px 0; text-align: center; font-size: 10px;
+    background: #f5f3ee; border: 1px solid #e7e5e4; cursor: pointer;
+  }
+  .crit-step.active { background: #fef2f2; border-color: #f87171; color: #b91c1c; font-weight: 600; }
+  .crit-step:first-child { border-radius: 6px 0 0 6px; }
+  .crit-step:last-child { border-radius: 0 6px 6px 0; }
+
+  .axis-row { display: grid; grid-template-columns: 50px 1fr 28px; gap: 6px; align-items: center; margin: 4px 0; }
+  .axis-label { font-family: monospace; font-size: 11px; font-weight: 600; color: #44403c; }
+  .axis-slider { width: 100%; }
+  .axis-val { text-align: right; font-size: 11px; color: #78716c; font-variant-numeric: tabular-nums; }
+  input[type=range].axis-slider {
+    -webkit-appearance: none; appearance: none; height: 4px;
+    background: #e7e5e4; border-radius: 4px;
+  }
+  input[type=range].axis-slider::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%;
+    background: #7c3aed; cursor: pointer;
+  }
+  input[type=range].axis-slider::-moz-range-thumb {
+    width: 14px; height: 14px; border-radius: 50%; background: #7c3aed; border: none;
+  }
+  .voice-stub {
+    background: #fef3c7; border: 1px dashed #f59e0b; border-radius: 8px;
+    padding: 8px 10px; font-size: 11px; color: #92400e; margin-top: 14px;
+  }
+  .model-toggle { display: flex; gap: 4px; margin-top: 4px; }
+  .model-toggle label {
+    flex: 1; text-align: center; padding: 5px 0; font-size: 11px;
+    border: 1px solid #d6d3d1; cursor: pointer; user-select: none;
+  }
+  .model-toggle input { display: none; }
+  .model-toggle input:checked + span { background: #ede9fe; color: #5b21b6; font-weight: 600; }
+  .model-toggle label:first-child { border-radius: 6px 0 0 6px; }
+  .model-toggle label:last-child { border-radius: 0 6px 6px 0; }
+  .model-toggle label:not(:first-child) { border-left: none; }
+  .ctx-pill { background: #f0fdf4; border: 1px solid #86efac; color: #166534; }
+</style>
+
+<div class="mb-3 flex items-baseline gap-3 flex-wrap">
+  <a href="/discuss" class="text-stone-500 hover:text-stone-900 text-sm">← все дискуссии</a>
+  <span class="text-stone-300">/</span>
+  <h1 class="text-lg font-bold flex items-center gap-2">
+    <span style="font-size: 1.4em; color: #7c3aed;">∇</span>
+    {{ session.title or 'новая дискуссия' }}
+  </h1>
+  {% if session.project_id %}<span class="pill bg-stone-100 text-stone-700">проект: {{ session.project_id }}</span>{% endif %}
+  {% if session.course_id %}<span class="pill ctx-pill">🎓 курс: {{ session.course_id }}</span>{% endif %}
+
+  <form method="post" action="/api/discuss/{{ session.id }}/delete" class="ml-auto"
+        onsubmit="return confirm('удалить эту дискуссию навсегда?')">
+    <button class="text-xs text-stone-400 hover:text-rose-700">удалить</button>
+  </form>
+</div>
+
+<div class="kai-page">
+  <!-- Чат -->
+  <div class="kai-chat">
+    <div class="kai-msg-list" id="msg-list">
+      {% if not session.messages %}
+        <div class="text-stone-400 text-sm text-center italic" style="margin-top: 30vh;">
+          Сцена ждёт первого хода. Спрашивай — или начинай с тезиса.
+        </div>
+      {% endif %}
+      {% for m in session.messages %}
+        {% if m.sender == 'user' %}
+          <div class="kai-msg">
+            <div class="kai-msg-user">{{ m.content }}</div>
+            <div class="kai-msg-meta text-right">{{ m.created_at[:16] }}</div>
+          </div>
+        {% else %}
+          <div class="kai-msg">
+            <div class="kai-msg-bot"><p>{{ m.content | replace('\n\n', '</p><p>') | safe }}</p></div>
+            <div class="kai-msg-meta">
+              ∇ {{ m.created_at[:16] }}
+              {% if m.tokens %}· {{ m.tokens }} tok{% endif %}
+              {% if m.duration_ms %}· {{ (m.duration_ms / 1000) | round(1) }} c{% endif %}
+            </div>
+          </div>
+        {% endif %}
+      {% endfor %}
+    </div>
+
+    <form class="kai-input-row" id="kai-form">
+      <textarea id="kai-input" rows="3" placeholder="Введи тезис, вопрос или провокацию. Ctrl+Enter — отправить." class="kai-input"></textarea>
+      <button type="submit" id="kai-send" class="kai-send">→</button>
+    </form>
+    <div class="text-xs text-stone-400 mt-1" id="kai-status"></div>
+  </div>
+
+  <!-- Пульт -->
+  <aside class="kai-panel">
+    <div class="kai-section-title">Цель</div>
+    <div id="goals-row">
+      {% for g in goals %}
+        <span class="goal-chip" data-goal="{{ g.id }}" title="{{ g.desc }}">{{ g.icon }} {{ g.name }}</span>
+      {% endfor %}
+    </div>
+
+    <div class="kai-section-title">Уровень критики</div>
+    <div class="crit-bar" id="crit-bar">
+      {% for k, v in critique_levels.items() %}
+        <div class="crit-step" data-crit="{{ k }}">{{ v.label }}</div>
+      {% endfor %}
+    </div>
+
+    <div class="kai-section-title">QMO-преcет</div>
+    <div id="presets-row">
+      {% for p in qmo_presets %}
+        <span class="preset-chip" data-preset="{{ p.id }}" data-axes='{{ p.axes | tojson }}' title="{{ p.desc }}">{{ p.icon }} {{ p.name }}</span>
+      {% endfor %}
+    </div>
+
+    <details class="mt-3">
+      <summary class="cursor-pointer text-xs font-bold text-stone-600 hover:text-violet-700">тонкая настройка осей ▾</summary>
+      <div id="axes-list" class="mt-2">
+        {% set axis_labels = {
+          'F': 'фрактальная многопоточность',
+          'M': 'мультионтологичность',
+          'A': 'авто-абстракция',
+          'Ω': 'онтогенез мира',
+          'Ψ': 'деконцентрация',
+          'Δ': 'различения',
+          'T': 'временная суперпозиция',
+          'I': 'оператор невозможности',
+          'S1': 'структурная глубина',
+          'C3': 'символическая мощность',
+          'Z3': 'ройный режим',
+          'Z8': 'иная логика',
+        } %}
+        {% for ax, val in default_axes.items() %}
+          <div class="axis-row" title="{{ axis_labels.get(ax, ax) }}">
+            <span class="axis-label">{{ ax }}</span>
+            <input type="range" class="axis-slider" min="0" max="10" data-axis="{{ ax }}" value="{{ val }}">
+            <span class="axis-val" id="ax-val-{{ ax }}">{{ val }}</span>
+          </div>
+        {% endfor %}
+      </div>
+    </details>
+
+    <div class="kai-section-title">Модель</div>
+    <div class="model-toggle">
+      <label><input type="radio" name="model_role" value="fast"><span>🚀 fast</span></label>
+      <label><input type="radio" name="model_role" value="deep"><span>🧠 deep</span></label>
+      <label><input type="radio" name="model_role" value="search"><span>🌐 search</span></label>
+    </div>
+
+    <div class="kai-section-title">Контекст</div>
+    <label class="flex items-center gap-2 text-xs cursor-pointer">
+      <input type="checkbox" id="use-library" checked> библиотека (RAG)
+    </label>
+    <label class="flex items-center gap-2 text-xs cursor-pointer mt-1">
+      <input type="checkbox" id="use-corpus" checked> архив (RAG)
+    </label>
+
+    <div class="voice-stub">
+      🎙 голосовой движок — фаза F2. Активирует ту же конфигурацию через TTS/STT когда подключим ключи.
+    </div>
+  </aside>
+</div>
+
+<script>
+const SESSION_ID = {{ session.id | tojson }};
+let CONFIG = {{ session.config | tojson }};
+
+// === init UI ===
+function paintConfig() {
+  document.querySelectorAll('.goal-chip').forEach(c => c.classList.toggle('active', c.dataset.goal === CONFIG.goal));
+  document.querySelectorAll('.crit-step').forEach(c => c.classList.toggle('active', String(c.dataset.crit) === String(CONFIG.critique_level)));
+  document.querySelectorAll('.preset-chip').forEach(c => c.classList.toggle('active', c.dataset.preset === CONFIG.qmo_preset));
+  if (CONFIG.axes) {
+    Object.entries(CONFIG.axes).forEach(([ax, val]) => {
+      const sl = document.querySelector(`input[data-axis="${ax}"]`);
+      if (sl) { sl.value = val; document.getElementById(`ax-val-${ax}`).textContent = val; }
+    });
+  }
+  document.querySelector(`input[name=model_role][value="${CONFIG.model_role || 'fast'}"]`).checked = true;
+  document.getElementById('use-library').checked = CONFIG.use_library !== false;
+  document.getElementById('use-corpus').checked = CONFIG.use_corpus !== false;
+}
+paintConfig();
+
+async function syncConfig() {
+  await fetch(`/api/discuss/${SESSION_ID}/config`, {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({config: CONFIG}),
+  });
+}
+
+document.querySelectorAll('.goal-chip').forEach(c => {
+  c.addEventListener('click', () => { CONFIG.goal = c.dataset.goal; paintConfig(); syncConfig(); });
+});
+document.querySelectorAll('.crit-step').forEach(c => {
+  c.addEventListener('click', () => { CONFIG.critique_level = parseInt(c.dataset.crit); paintConfig(); syncConfig(); });
+});
+document.querySelectorAll('.preset-chip').forEach(c => {
+  c.addEventListener('click', () => {
+    CONFIG.qmo_preset = c.dataset.preset;
+    const newAxes = JSON.parse(c.dataset.axes);
+    // оси из пресета поверх default
+    CONFIG.axes = {...CONFIG.axes, ...newAxes};
+    paintConfig(); syncConfig();
+  });
+});
+document.querySelectorAll('input.axis-slider').forEach(sl => {
+  sl.addEventListener('input', () => {
+    const ax = sl.dataset.axis;
+    CONFIG.axes[ax] = parseInt(sl.value);
+    document.getElementById(`ax-val-${ax}`).textContent = sl.value;
+    CONFIG.qmo_preset = 'custom';
+    document.querySelectorAll('.preset-chip').forEach(c => c.classList.remove('active'));
+  });
+  sl.addEventListener('change', syncConfig);
+});
+document.querySelectorAll('input[name=model_role]').forEach(r => {
+  r.addEventListener('change', () => { CONFIG.model_role = r.value; syncConfig(); });
+});
+document.getElementById('use-library').addEventListener('change', e => { CONFIG.use_library = e.target.checked; syncConfig(); });
+document.getElementById('use-corpus').addEventListener('change', e => { CONFIG.use_corpus = e.target.checked; syncConfig(); });
+
+// === messaging ===
+function appendUser(text) {
+  const el = document.createElement('div');
+  el.className = 'kai-msg';
+  el.innerHTML = `<div class="kai-msg-user"></div><div class="kai-msg-meta text-right">только что</div>`;
+  el.querySelector('.kai-msg-user').textContent = text;
+  document.getElementById('msg-list').appendChild(el);
+  scrollDown();
+}
+function appendBot(text, meta) {
+  const el = document.createElement('div');
+  el.className = 'kai-msg';
+  const html = text.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>');
+  el.innerHTML = `<div class="kai-msg-bot"><p>${html}</p></div><div class="kai-msg-meta">∇ ${meta || ''}</div>`;
+  document.getElementById('msg-list').appendChild(el);
+  scrollDown();
+}
+function scrollDown() {
+  const list = document.getElementById('msg-list');
+  list.scrollTop = list.scrollHeight;
+}
+scrollDown();
+
+document.getElementById('kai-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const input = document.getElementById('kai-input');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  appendUser(text);
+
+  const status = document.getElementById('kai-status');
+  status.textContent = '∇ kaiyona думает...';
+  const send = document.getElementById('kai-send');
+  send.disabled = true;
+
+  try {
+    const r = await fetch(`/api/discuss/${SESSION_ID}/message`, {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({text}),
+    });
+    if (r.status === 429) {
+      const e = await r.json();
+      appendBot('⚠ ' + (e.detail || 'лимит исчерпан') + ' — введи 🔑 код на /support');
+      return;
+    }
+    if (!r.ok) {
+      appendBot('⚠ ошибка: ' + (await r.text()).slice(0, 200));
+      return;
+    }
+    const d = await r.json();
+    appendBot(d.reply, `${(d.duration_ms/1000).toFixed(1)} с · ${d.tokens || '?'} tok`);
+    status.textContent = '';
+    if (window.refreshTokens) setTimeout(refreshTokens, 500);
+  } catch (err) {
+    appendBot('⚠ сбой: ' + err.message);
+  } finally {
+    send.disabled = false;
+  }
+});
+
+document.getElementById('kai-input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+    e.preventDefault();
+    document.getElementById('kai-form').requestSubmit();
+  }
+});
+</script>
+
+{% endblock %}

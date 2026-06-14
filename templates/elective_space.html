@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Элективное пространство — Paideia{% endblock %}
+{% block content %}
+
+<div class="mb-4 flex items-center gap-3">
+  <a href="/" class="text-stone-500 hover:text-stone-900 text-sm">← главная</a>
+  <h1 class="text-xl font-bold">🌳 Элективное пространство</h1>
+  <span class="text-stone-500 text-sm">— многоосевая модель из исходного бот-промпта</span>
+</div>
+
+<div class="bg-stone-100 border border-stone-200 rounded p-3 mb-4 text-sm">
+  Параллельная онтология рядом с фасетами корпуса (LIN/MOD/NET и т.д.).
+  Используется визардом для классификации курса по 6 осям, чтобы потом
+  собирать траектории студентов и подбирать аналоги в правильной зоне поля.
+</div>
+
+<div class="grid grid-cols-2 gap-4">
+  {% for axis_key, axis_label in [
+      ("deyatelnosti", "1. Пространства деятельности"),
+      ("instrumenty",  "2. Типы инструментов"),
+      ("osi_prilozheniya", "3. Оси приложения"),
+      ("urovni_vkhoda",  "4. Уровни движения"),
+      ("formy_kursov", "5. Формы курсов"),
+      ("ritmy",        "6. Ритмы прохождения"),
+  ] %}
+    <section class="bg-white border border-stone-200 rounded p-4">
+      <h2 class="font-bold mb-3">{{ axis_label }}</h2>
+      <ul class="space-y-2">
+        {% for item in data.get(axis_key, []) %}
+          <li class="text-sm">
+            <strong>{{ item.name }}</strong>
+            {% if item.description %}<div class="text-xs text-stone-600">{{ item.description }}</div>{% endif %}
+            {% if item.examples %}<div class="text-xs text-stone-400">примеры: {{ item.examples | join(", ") }}</div>{% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    </section>
+  {% endfor %}
+</div>
+{% endblock %}

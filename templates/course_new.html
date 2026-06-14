@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Новый курс — Paideia{% endblock %}
+{% block content %}
+
+<div class="mb-4 flex items-center gap-3">
+  <a href="/courses" class="text-stone-500 hover:text-stone-900 text-sm">← курсы</a>
+  <h1 class="text-xl font-bold">+ Новый курс</h1>
+</div>
+
+<form method="post" action="/api/course/create" class="bg-white border border-stone-200 rounded-lg p-6 space-y-4 max-w-2xl">
+  <div>
+    <label class="block text-sm font-semibold mb-1">Название *</label>
+    <input name="name" required class="border border-stone-300 rounded px-3 py-2 w-full" placeholder="Например: Философия 2026/осень">
+  </div>
+  <div>
+    <label class="block text-sm font-semibold mb-1">Описание</label>
+    <textarea name="description" rows="3" class="border border-stone-300 rounded px-3 py-2 w-full" placeholder="Кратко о замысле курса"></textarea>
+  </div>
+  <div class="grid grid-cols-2 gap-3">
+    <div>
+      <label class="block text-sm font-semibold mb-1">Период с</label>
+      <input name="period_start" type="date" class="border border-stone-300 rounded px-3 py-2 w-full">
+    </div>
+    <div>
+      <label class="block text-sm font-semibold mb-1">по</label>
+      <input name="period_end" type="date" class="border border-stone-300 rounded px-3 py-2 w-full">
+    </div>
+  </div>
+  <div>
+    <label class="block text-sm font-semibold mb-1">Авторы</label>
+    <input name="authors" class="border border-stone-300 rounded px-3 py-2 w-full" placeholder="Фамилия И.О.">
+  </div>
+  <div>
+    <label class="block text-sm font-semibold mb-1">Целевая аудитория</label>
+    <input name="target_audience" class="border border-stone-300 rounded px-3 py-2 w-full" placeholder="бакалавры 3-4 курса / магистры">
+  </div>
+
+  <div class="bg-amber-50 border border-amber-200 rounded p-3 text-xs">
+    После создания ты автоматически получишь роль <strong>author</strong> в этом курсе.
+    Дальше добавляй события (лекции, семинары) на странице курса.
+  </div>
+
+  <button class="bg-violet-700 text-white px-5 py-2 rounded font-semibold hover:bg-violet-600">
+    создать курс
+  </button>
+</form>
+
+{% endblock %}

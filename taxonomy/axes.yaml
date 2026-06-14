@@ -1,0 +1,200 @@
+# Многомерный набор осей для размещения кейсов и проектов в пространстве корпуса.
+# Делится на два семейства по гипотезе: AI-инженерные оси и оси образовательной
+# трансформации. На пересечении — третий слой (пока заглушка).
+#
+# Оси не обязательно ортогональны. UI на странице оси показывает
+# наблюдаемые корреляции с остальными осями по корпусу.
+#
+# Любая ось может быть НЕ заполнена для конкретной карточки — это значит "не определено
+# для этого наблюдения". Подбор аналогов работает по выбранному подмножеству осей.
+#
+# kind:
+#   ordinal       — порядковая шкала с явным направлением (low → high)
+#   categorical   — закрытый список значений из enum
+#   bool          — да/нет
+#   freeform      — короткий текст (для качественных оценок)
+
+families:
+  ai_engineering:
+    label: ИИ-инженерные оси
+    hint: тип ИИ, модели, архитектурные концепты команды
+  educational_transformation:
+    label: образовательная трансформация
+    hint: тип сдвига практики, управленческий контур, политическое измерение
+  synthesis:
+    label: пересечение (на доработке)
+    hint: оси, которые возникают на стыке двух семейств; формализуются позже
+
+axes:
+
+  # --- AI engineering --------------------------------------------------------
+
+  agentivity:
+    family: ai_engineering
+    kind: ordinal
+    scale: [0, 6]
+    direction: "low = инструмент → high = автономная когнитивная инфраструктура"
+    mirrors: agentivity_scale.yaml
+
+  ai_pattern:
+    family: ai_engineering
+    kind: categorical
+    enum_source: patterns.yaml
+    hint: какой архитектурный тип A-F инстанциирует кейс
+
+  orchestration:
+    family: ai_engineering
+    kind: categorical
+    enum: [LIN, MOD, NET, META, SWARM]
+    hint: топология координации между человеком и AI-узлами
+
+  control_locus:
+    family: ai_engineering
+    kind: categorical
+    enum: [HUMAN, COOP, HYBR, MACH]
+    hint: где находится точка принятия решений
+
+  provider_lock_in:
+    family: ai_engineering
+    kind: ordinal
+    scale: [1, 5]
+    direction: "1 = мульти-вендор → 5 = один провайдер"
+
+  rag_grounded:
+    family: ai_engineering
+    kind: bool
+    hint: привязан ли AI к материалам курса / документам организации
+
+  has_persistent_state:
+    family: ai_engineering
+    kind: bool
+    hint: ведёт ли система модель пользователя/студента долгосрочно
+
+  audit_trail_strength:
+    family: ai_engineering
+    kind: ordinal
+    scale: [1, 5]
+    direction: "1 = ничего не пишется → 5 = полные логи и версионирование"
+
+  domain_specificity:
+    family: ai_engineering
+    kind: ordinal
+    scale: [1, 5]
+    direction: "1 = общий ассистент → 5 = узкий домен (мед, eng, юр)"
+
+  evaluation_evidence_strength:
+    family: ai_engineering
+    kind: ordinal
+    scale: [1, 5]
+    direction: "1 = PR-нарратив → 5 = RCT с публикуемыми метриками"
+
+  interaction_form:
+    family: ai_engineering
+    kind: categorical
+    enum:
+      - chat
+      - agent-workflow
+      - persona-roleplay
+      - multi-agent-simulation
+      - governed-portal
+      - lms-microrole
+      - knowledge-graph-tutor
+
+  # --- Educational transformation -------------------------------------------
+
+  pedagogy_transformation:
+    family: educational_transformation
+    kind: categorical
+    enum: [AMP, ROLE, AUTO, INST, SUBJ]
+    hint: как меняется образовательный процесс
+
+  transformation_mode:
+    family: educational_transformation
+    kind: categorical
+    enum_source: transformation_modes.yaml
+    hint: каким контуром идёт трансформация (см. transformation_modes.yaml)
+
+  scale_of_change:
+    family: educational_transformation
+    kind: ordinal
+    scale: [1, 5]
+    direction: "1 = локально в одном курсе → 5 = межинституциональный слой"
+
+  institutional_depth:
+    family: educational_transformation
+    kind: ordinal
+    scale: [1, 5]
+    direction: "1 = на правах кружка → 5 = зашито в инфраструктуру университета"
+
+  radicalness:
+    family: educational_transformation
+    kind: ordinal
+    scale: [1, 5]
+    direction: "1 = добавка к существующей практике → 5 = переустройство практики"
+
+  reversible:
+    family: educational_transformation
+    kind: bool
+    hint: можно ли откатить без больших организационных потерь
+
+  governance_strength:
+    family: educational_transformation
+    kind: ordinal
+    scale: [1, 5]
+    direction: "1 = ad-hoc → 5 = competence centre + ambassadors + policy"
+
+  portability:
+    family: educational_transformation
+    kind: ordinal
+    scale: [1, 5]
+    direction: "1 = неотделимо от контекста → 5 = переносимо на другой кампус"
+
+  reflexivity:
+    family: educational_transformation
+    kind: ordinal
+    scale: [1, 5]
+    direction: "1 = без рефлексивного контура → 5 = обязательный reflection step"
+
+  human_role_complexity:
+    family: educational_transformation
+    kind: ordinal
+    scale: [1, 5]
+    direction: "1 = одна слитная роль преподавателя → 5 = распределение картограф/медиатор/организатор/хранитель"
+
+  data_sensitivity:
+    family: educational_transformation
+    kind: ordinal
+    scale: [1, 5]
+    direction: "1 = открытое → 5 = HIPAA/FERPA/закрытое"
+
+  cost_intensity:
+    family: educational_transformation
+    kind: ordinal
+    scale: [1, 5]
+    direction: "1 = бесплатно → 5 = миллионы $"
+
+  lms_integration:
+    family: educational_transformation
+    kind: bool
+    hint: встроено ли в LMS (Canvas, Blackboard и т.п.)
+
+  has_metrics:
+    family: educational_transformation
+    kind: bool
+    hint: публикуются ли usage-метрики (токены, пользователи, заявки)
+
+  # --- Synthesis (заглушка, наполняется позже) ------------------------------
+
+  risk_of_goal_substitution:
+    family: synthesis
+    kind: ordinal
+    scale: [1, 5]
+    direction: "1 = низкий риск → 5 = AI подменяет цель обучения процессом использования"
+    hint: из ТюмГУ-канваса; точная формализация на доработке
+
+  risk_of_lowered_bar:
+    family: synthesis
+    kind: ordinal
+    scale: [1, 5]
+    direction: "1 = планка не снижается → 5 = AI выдаёт за работу то, что раньше не считалось работой"
+    hint: из ТюмГУ-канваса; точная формализация на доработке

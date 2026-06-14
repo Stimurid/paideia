@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Загрузка книги — Paideia{% endblock %}
+{% block content %}
+
+<div class="mb-4 flex items-center gap-3">
+  <a href="/library" class="text-stone-500 hover:text-stone-900 text-sm">← библиотека</a>
+  <h1 class="text-xl font-bold">📥 Загрузить книгу</h1>
+</div>
+
+<form method="post" action="/api/library/upload" enctype="multipart/form-data"
+      class="bg-white border border-stone-200 rounded-lg p-6 space-y-4 max-w-2xl">
+
+  <div>
+    <label class="block text-sm font-semibold mb-1">Файл *</label>
+    <input type="file" name="file" required accept=".pdf,.docx,.pptx,.md,.txt,.epub"
+           class="text-sm border border-stone-300 rounded px-3 py-2 w-full">
+    <p class="text-xs text-stone-500 mt-1">PDF, DOCX, PPTX, MD, TXT. До 50 МБ.</p>
+  </div>
+
+  <div>
+    <label class="block text-sm font-semibold mb-1">Название *</label>
+    <input type="text" name="title" required
+           class="text-sm border border-stone-300 rounded px-3 py-2 w-full"
+           placeholder="Например: Мышление и речь">
+  </div>
+
+  <div class="grid grid-cols-2 gap-3">
+    <div>
+      <label class="block text-sm font-semibold mb-1">Авторы</label>
+      <input type="text" name="authors"
+             class="text-sm border border-stone-300 rounded px-3 py-2 w-full"
+             placeholder="Выготский Л.С.">
+    </div>
+    <div>
+      <label class="block text-sm font-semibold mb-1">Год</label>
+      <input type="number" name="year" min="1900" max="2030"
+             class="text-sm border border-stone-300 rounded px-3 py-2 w-full"
+             placeholder="1934">
+    </div>
+  </div>
+
+  <div class="bg-amber-50 border border-amber-200 rounded p-3 text-xs">
+    После upload запустится pipeline:
+    <ol class="list-decimal ml-5 mt-1">
+      <li>Извлечение текста (1-5 с)</li>
+      <li>Разбиение на секции + чанки (1 с)</li>
+      <li>LLM-summary + topics (~15 с)</li>
+      <li>LLM-extraction концептов (по 2 секции → ~5 с/пара)</li>
+    </ol>
+    На книге 200 страниц весь pipeline занимает 3-7 минут.
+  </div>
+
+  <button type="submit" class="bg-violet-700 text-white px-5 py-2 rounded font-semibold hover:bg-violet-600">
+    📤 Загрузить и обработать
+  </button>
+</form>
+
+{% endblock %}

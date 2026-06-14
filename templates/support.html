@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+{% block title %}Поддержать Paideia{% endblock %}
+{% block content %}
+
+<div class="max-w-3xl mx-auto">
+  <h1 class="text-2xl font-bold mb-2">💛 Поддержать Paideia</h1>
+  <p class="text-stone-600 mb-6">
+    Paideia — открытая платформа. Платит за LLM-запросы один человек.
+    Если пользуешься регулярно — закинь сколько не жалко: токены, хостинг,
+    эмбеддинги. <strong>После доната с твоей сессии снимаются дневные лимиты.</strong>
+  </p>
+
+  {% if request.query_params.get("paid") %}
+    <div class="bg-emerald-50 border border-emerald-300 rounded p-4 mb-6 text-center">
+      ✅ <strong>Спасибо!</strong> Платёж принят. Лимиты на этой сессии снимаются автоматически
+      после прихода webhook от ЮKassa (обычно 1-2 минуты).
+    </div>
+  {% endif %}
+  {% if request.query_params.get("redeemed") %}
+    <div class="bg-emerald-50 border border-emerald-300 rounded p-4 mb-6 text-center">
+      🔑 <strong>Код принят.</strong> Дневные лимиты для тебя сняты на этой сессии.
+    </div>
+  {% endif %}
+
+  <!-- Код от автора -->
+  <details class="bg-amber-50 border border-amber-300 rounded-lg p-4 mb-6">
+    <summary class="cursor-pointer font-semibold text-sm">🔑 У меня код от Тимура — снять лимиты без оплаты</summary>
+    <form method="post" action="/api/support/redeem-code" class="mt-3 flex gap-2 items-center">
+      <input name="code" required placeholder="введи код"
+             class="border border-stone-300 rounded px-3 py-2 text-sm flex-1"
+             autocapitalize="off" autocomplete="off">
+      <button class="bg-amber-600 text-white px-5 py-2 rounded text-sm font-semibold hover:bg-amber-500">
+        снять лимиты
+      </button>
+    </form>
+    <p class="text-xs text-stone-500 mt-2">
+      Код выдаёт Тимур руками (тестерам, друзьям, на демо). Без кода — донат любой суммой даёт тот же эффект.
+    </p>
+  </details>
+
+  <!-- Себестоимость -->
+  <div class="bg-stone-100 border border-stone-200 rounded-lg p-4 mb-6 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+    <div>
+      <div class="text-xs text-stone-500 uppercase">за 30 дней</div>
+      <div class="text-xl font-bold">${{ "%.2f" % spent_30d_usd }}</div>
+      <div class="text-xs text-stone-500">расходы на LLM</div>
+    </div>
+    <div>
+      <div class="text-xs text-stone-500 uppercase">бюджет сегодня</div>
+      <div class="text-xl font-bold">${{ "%.2f" % budget.spent_usd }} / ${{ "%.0f" % budget.cap_usd }}</div>
+      <div class="text-xs text-stone-500">{{ budget.percent }}% · {{ budget.calls_today }} вызовов</div>
+    </div>
+    <div>
+      <div class="text-xs text-stone-500 uppercase">получено всего</div>
+      <div class="text-xl font-bold text-emerald-700">${{ "%.2f" % donations_total_usd }}</div>
+      <div class="text-xs text-stone-500">от {{ recent_supporters | length }}+ человек</div>
+    </div>
+    <div>
+      <div class="text-xs text-stone-500 uppercase">стоимость запроса</div>
+      <div class="text-xl font-bold">≈ $0.002–0.05</div>
+      <div class="text-xs text-stone-500">fast → deep</div>
+    </div>
+  </div>
+
+  <!-- ЮKassa: основной канал -->
+  {% if yk_enabled %}
+    <div class="bg-white border-2 border-violet-300 rounded-lg p-6 mb-4">
+      <div class="flex items-center gap-3 mb-3">
+        <span class="text-3xl">💳</span>
+        <div>
+          <div class="font-bold">Картой или СБП через ЮKassa</div>
+          <div class="text-xs text-stone-500">Visa / Mir / СБП / SberPay. Безопасно, 1 минута, авто-снятие лимитов.</div>
+        </div>
+      </div>
+      <form id="yk-form" class="space-y-3">
+        <div class="flex gap-2 flex-wrap">
+          {% for v in [100, 300, 500, 1000, 3000, 5000] %}
+            <button type="button" onclick="setAmount({{ v }})"
+                    class="amount-btn border border-stone-300 rounded px-3 py-2 text-sm hover:bg-violet-100 hover:border-violet-400">
+              {{ v }} ₽
+            </button>
+          {% endfor %}
+        </div>
+        <div class="flex gap-2">
+          <input type="number" id="yk-amount" min="10" step="any" placeholder="своя сумма, ₽"
+                 class="border border-stone-300 rounded px-3 py-2 flex-1 text-sm" required>
+          <input type="text" id="yk-nickname" placeholder="ник (опц.)"
+                 class="border border-stone-300 rounded px-3 py-2 w-40 text-sm">
+        </div>
+        <button type="submit" class="bg-violet-700 text-white px-5 py-2 rounded font-semibold hover:bg-violet-600">
+          💳 → Перейти к оплате
+        </button>
+        <div id="yk-status" class="text-sm"></div>
+      </form>
+    </div>
+  {% else %}
+    <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4 text-sm">
+      ⚙️ <strong>ЮKassa ещё не подключена.</strong>
+      Нужны переменные окружения <code>YOOKASSA_SHOP_ID</code> и <code>YOOKASSA_SECRET_KEY</code> в <code>.env</code>.
+      Инструкция: <a href="https://yookassa.ru/joinups" target="_blank" class="text-violet-700 underline">yookassa.ru/joinups</a>
+    </div>
+  {% endif %}
+
+  <!-- Тинькофф donate-страница -->
+  {% if tinkoff_url %}
+    <div class="bg-white border-2 border-amber-300 rounded-lg p-6 mb-4">
+      <div class="flex items-center gap-3 mb-3">
+        <span class="text-3xl">🟡</span>
+        <div class="flex-1">
+          <div class="font-bold">Картой через Тинькофф</div>
+          <div class="text-xs text-stone-500">Любая карта (российская/иностранная), произвольная сумма</div>
+        </div>
+        <a href="{{ tinkoff_url }}" target="_blank" rel="noopener" class="bg-amber-500 text-white px-5 py-2 rounded font-semibold hover:bg-amber-600">
+          → Открыть страницу
+        </a>
+      </div>
+    </div>
+  {% endif %}
+
+  <!-- СБП на телефон -->
+  {% if sbp_info %}
+    <div class="bg-white border-2 border-emerald-300 rounded-lg p-6 mb-4">
+      <div class="flex items-center gap-3 mb-3">
+        <span class="text-3xl">📱</span>
+        <div>
+          <div class="font-bold">СБП на телефон</div>
+          <div class="text-xs text-stone-500">Перевод по номеру через любой банк, 0% комиссии до 100к/мес</div>
+        </div>
+      </div>
+      <div class="bg-stone-50 rounded p-3 text-sm space-y-1">
+        <div><strong>Телефон:</strong> <span class="font-mono text-lg select-all">{{ sbp_info.phone }}</span>
+          <button onclick="navigator.clipboard.writeText('{{ sbp_info.phone }}'); this.textContent='✓ скопировано'"
+                  class="ml-2 text-xs text-violet-700 hover:underline">копировать</button>
+        </div>
+        <div><strong>Банк:</strong> {{ sbp_info.bank }}</div>
+        {% if sbp_info.holder %}<div><strong>Получатель:</strong> {{ sbp_info.holder }}</div>{% endif %}
+      </div>
+      <p class="text-xs text-stone-500 mt-2">
+        После перевода нажми «отметить» ниже — снимутся лимиты.
+      </p>
+    </div>
+  {% endif %}
+
+  <!-- Ручная фиксация (для СБП и иных каналов) -->
+  <details class="bg-white border border-stone-200 rounded-lg p-4 mb-6">
+    <summary class="cursor-pointer font-semibold text-sm">Закинул через СБП / другой канал? Отметь — снимутся лимиты</summary>
+    <form method="post" action="/api/support/record" class="mt-3 space-y-3">
+      <div class="grid grid-cols-2 gap-3">
+        <input name="nickname" placeholder="Имя / ник (опц.)" class="border border-stone-300 rounded px-3 py-2 text-sm w-full">
+        <select name="channel" class="border border-stone-300 rounded px-3 py-2 text-sm w-full">
+          <option value="sbp">СБП на телефон</option>
+          <option value="manual">другое</option>
+        </select>
+        <input name="amount_rub" type="number" step="any" placeholder="₽ (опц.)" class="border border-stone-300 rounded px-3 py-2 text-sm w-full">
+        <input name="amount_usd" type="number" step="any" placeholder="$ (опц.)" class="border border-stone-300 rounded px-3 py-2 text-sm w-full">
+      </div>
+      <input name="note" placeholder="Комментарий (опц.)" class="border border-stone-300 rounded px-3 py-2 text-sm w-full">
+      <button class="bg-emerald-600 text-white px-5 py-2 rounded font-semibold hover:bg-emerald-500">
+        ✓ отметить и снять лимиты
+      </button>
+      <p class="text-xs text-stone-500">
+        Trust on word: для СБП и переводов без webhook. ЮKassa-платежи попадают автоматически.
+      </p>
+    </form>
+  </details>
+
+  <!-- Последние благодарности -->
+  {% if recent_supporters %}
+    <h2 class="text-lg font-bold mb-3">Последние благодарности</h2>
+    <ul class="space-y-2 text-sm">
+      {% for s in recent_supporters %}
+        <li class="bg-white border border-stone-200 rounded p-3 flex justify-between items-center">
+          <span>
+            <strong>{{ s.nickname or 'аноним' }}</strong>
+            <span class="text-xs text-stone-500 ml-2">via {{ s.channel }}</span>
+            {% if s.amount_rub %}<span class="ml-2 text-emerald-700">{{ s.amount_rub | int }} ₽</span>{% endif %}
+          </span>
+          <span class="text-stone-500 text-xs">{{ s.created_at[:16] }}</span>
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+</div>
+
+{% if yk_enabled %}
+<script>
+function setAmount(v) {
+  document.getElementById('yk-amount').value = v;
+}
+document.getElementById('yk-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const amount = parseFloat(document.getElementById('yk-amount').value);
+  const nick = document.getElementById('yk-nickname').value.trim();
+  const st = document.getElementById('yk-status');
+  if (!amount || amount < 10) { st.innerHTML = '<span class="text-rose-700">минимум 10 ₽</span>'; return; }
+  st.innerHTML = '⏳ создаю платёж...';
+  try {
+    const r = await fetch('/api/support/create-payment', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({amount_rub: amount, nickname: nick}),
+    });
+    if (!r.ok) { st.innerHTML = '<span class="text-rose-700">' + (await r.text()) + '</span>'; return; }
+    const d = await r.json();
+    st.innerHTML = '✓ переход на ЮKassa...';
+    window.location.href = d.confirmation_url;
+  } catch (err) {
+    st.innerHTML = '<span class="text-rose-700">ошибка: ' + err.message + '</span>';
+  }
+});
+</script>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}Agent Foundry — Paideia{% endblock %}
+{% block content %}
+
+<div class="mb-4 flex items-center gap-3">
+  <a href="/" class="text-stone-500 hover:text-stone-900 text-sm">← главная</a>
+  <h1 class="text-xl font-bold">⚒️ Agent Foundry</h1>
+  <span class="text-stone-500 text-sm">— импорт TRIZ-донорских ботов в регистр L1/L2 агентов</span>
+</div>
+
+<div class="bg-stone-100 border border-stone-200 rounded p-3 mb-6 text-sm flex gap-4">
+  <span>📦 <strong>{{ stats.sources }}</strong> доноров обработано</span>
+  <span>🎯 <strong>{{ stats.candidates }}</strong> кандидатов</span>
+  <span>✅ <strong>{{ stats.high_apply }}</strong> high-applicability</span>
+  <span>🚫 <strong>{{ stats.rejected }}</strong> rejected</span>
+  <span class="ml-auto text-xs text-stone-500">регистр: {{ stats.active_agents }} L1 active</span>
+</div>
+
+{% for src in sources %}
+<details class="bg-white border border-stone-200 rounded mb-3" {% if loop.index <= 2 %}open{% endif %}>
+  <summary class="cursor-pointer px-4 py-3 hover:bg-stone-50 flex items-center gap-3">
+    <strong>{{ src.source }}</strong>
+    {% if src.status == 'ok' %}
+      <span class="pill bg-emerald-100 text-emerald-700">{{ src.candidates_count }} candidates</span>
+    {% else %}
+      <span class="pill bg-rose-100 text-rose-700">{{ src.status }}</span>
+    {% endif %}
+    {% if src.duration_s %}<span class="text-xs text-stone-400">{{ src.duration_s }}s</span>{% endif %}
+    {% if src.parsed and src.parsed.executable_density %}
+      <span class="text-xs text-stone-500 ml-auto">executable: {{ src.parsed.executable_density }}% · decorative: {{ src.parsed.decorative_density or 0 }}%</span>
+    {% endif %}
+  </summary>
+  <div class="px-4 pb-4 border-t border-stone-100">
+    {% if src.parsed and src.parsed.notes %}
+      <p class="text-xs text-stone-600 italic mt-2 mb-3">{{ src.parsed.notes }}</p>
+    {% endif %}
+
+    {% if src.parsed and src.parsed.candidates %}
+      <h3 class="text-xs uppercase tracking-wide text-stone-500 font-semibold mb-2 mt-3">Candidates</h3>
+      <ul class="space-y-2">
+        {% for c in src.parsed.candidates %}
+          <li class="bg-stone-50 border border-stone-200 rounded p-3">
+            <div class="flex items-center gap-2 mb-1">
+              <span class="pill bg-stone-100 text-stone-700">{{ c.kind }}</span>
+              <span class="pill bg-violet-100 text-violet-700">{{ c.level }}</span>
+              <strong class="text-sm">{{ c.name_normalized }}</strong>
+              <span class="text-xs text-stone-500">({{ c.name_orig }})</span>
+              {% set ap_color = {'high':'bg-emerald-100 text-emerald-700','medium':'bg-amber-100 text-amber-700','low':'bg-stone-100 text-stone-500'}.get(c.applicability_to_paideia, 'bg-stone-100') %}
+              <span class="pill {{ ap_color }} ml-auto">apply: {{ c.applicability_to_paideia }}</span>
+            </div>
+            <p class="text-sm text-stone-700 mt-1"><strong>purpose:</strong> {{ c.purpose }}</p>
+            {% if c.field_function %}<p class="text-xs text-stone-600 mt-1"><strong>field:</strong> {{ c.field_function }}</p>{% endif %}
+            {% if c.adaptation_notes %}
+              <p class="text-xs text-stone-500 mt-1 italic"><strong>adapt:</strong> {{ c.adaptation_notes }}</p>
+            {% endif %}
+            <details class="mt-2 text-xs">
+              <summary class="cursor-pointer text-stone-500">kernel draft + детали</summary>
+              <div class="mt-2 space-y-2">
+                <div>
+                  <div class="font-semibold text-stone-600">inputs:</div>
+                  <div class="text-stone-500">{{ c.inputs | join(", ") if c.inputs else "—" }}</div>
+                </div>
+                <div>
+                  <div class="font-semibold text-stone-600">outputs:</div>
+                  <div class="text-stone-500">{{ c.outputs | join(", ") if c.outputs else "—" }}</div>
+                </div>
+                <div>
+                  <div class="font-semibold text-stone-600">activation:</div>
+                  <div class="text-stone-500">{{ c.activation_conditions | join("; ") if c.activation_conditions else "—" }}</div>
+                </div>
+                {% if c.kernel_prompt_draft %}
+                  <div>
+                    <div class="font-semibold text-stone-600">kernel draft:</div>
+                    <pre class="bg-white border border-stone-200 rounded p-2 mt-1 max-h-48 overflow-y-auto whitespace-pre-wrap">{{ c.kernel_prompt_draft }}</pre>
+                  </div>
+                {% endif %}
+                {% if c.risks %}
+                  <div>
+                    <div class="font-semibold text-rose-700">risks:</div>
+                    <ul class="list-disc ml-5 text-rose-600">{% for r in c.risks %}<li>{{ r }}</li>{% endfor %}</ul>
+                  </div>
+                {% endif %}
+              </div>
+            </details>
+            <form method="post" action="/api/foundry/activate" class="mt-2 flex gap-2 text-xs">
+              <input type="hidden" name="source_pdf" value="{{ src.source }}">
+              <input type="hidden" name="candidate_index" value="{{ loop.index0 }}">
+              <button class="bg-stone-900 text-stone-100 px-3 py-1 rounded hover:bg-stone-700">📤 в регистр (draft)</button>
+            </form>
+          </li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+
+    {% if src.parsed and src.parsed.rejected %}
+      <h3 class="text-xs uppercase tracking-wide text-stone-400 font-semibold mb-2 mt-4">Rejected ({{ src.parsed.rejected | length }})</h3>
+      <ul class="text-xs text-stone-500 space-y-1">
+        {% for r in src.parsed.rejected %}<li>· <strong>{{ r.name }}</strong> — {{ r.reason }}</li>{% endfor %}
+      </ul>
+    {% endif %}
+  </div>
+</details>
+{% endfor %}
+
+{% if not sources %}
+<div class="bg-amber-50 border border-amber-200 rounded p-6 text-center">
+  <p class="mb-3">PDF-доноры ещё не обработаны.</p>
+  <code class="text-xs">python -m scripts.foundry_extract</code>
+</div>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Сервисный режим — Paideia{% endblock %}
+{% block content %}
+
+<div class="mb-4 flex items-center gap-3">
+  <h1 class="text-xl font-bold">⚙️ Сервисный режим</h1>
+  <span class="text-stone-500 text-sm">— admin, devops, разработчики агентов</span>
+</div>
+
+<div class="bg-amber-50 border border-amber-200 rounded p-3 mb-6 text-sm">
+  Эти инструменты не нужны преподавателю в обычной работе. Они здесь, чтобы расширять корпус, добавлять агентов, отслеживать стоимость, чинить бэк.
+</div>
+
+<div class="grid grid-cols-2 gap-4">
+
+  <a href="/foundry" class="bg-white border border-stone-200 rounded-lg p-5 hover:shadow-md hover:border-stone-400 transition block">
+    <div class="text-2xl mb-2">⚒️</div>
+    <h3 class="font-bold mb-1">Agent Foundry</h3>
+    <p class="text-stone-500 text-sm mb-2">Парсер PDF-донорских ботов → AgentSpec → kernel → активация в регистр L1/L2/L3.</p>
+    <div class="text-xs text-stone-400">{{ stats.foundry_sources }} sources · {{ stats.foundry_candidates }} candidates · {{ stats.foundry_high }} high-applicability</div>
+  </a>
+
+  <a href="/llm-runs" class="bg-white border border-stone-200 rounded-lg p-5 hover:shadow-md hover:border-stone-400 transition block">
+    <div class="text-2xl mb-2">📊</div>
+    <h3 class="font-bold mb-1">LLM-аудит</h3>
+    <p class="text-stone-500 text-sm mb-2">Все вызовы LLM: токены, стоимость, кеш-hit rate, ошибки. Фильтр по purpose и модели.</p>
+    <div class="text-xs text-stone-400">{{ stats.llm_runs }} вызовов · {{ stats.llm_total_seconds|round(0) }} с · ${{ "%.4f" | format(stats.llm_total_cost or 0) }}</div>
+  </a>
+
+  <a href="/service/feedback" class="bg-white border border-stone-200 rounded-lg p-5 hover:shadow-md hover:border-stone-400 transition block">
+    <div class="text-2xl mb-2">💬</div>
+    <h3 class="font-bold mb-1">Feedback</h3>
+    <p class="text-stone-500 text-sm mb-2">Соображения, идеи, критика и баги от пользователей через виджет на любой странице. Выгрузка в md.</p>
+    <div class="text-xs text-stone-400">{{ stats.feedback_threads }} тредов</div>
+  </a>
+
+  <a href="/counter-signals" class="bg-white border border-stone-200 rounded-lg p-5 hover:shadow-md hover:border-stone-400 transition block">
+    <div class="text-2xl mb-2">💀</div>
+    <h3 class="font-bold mb-1">Контр-сигналы</h3>
+    <p class="text-stone-500 text-sm mb-2">Каталог провалов, откатов, фальсификаций гипотез. Используется в profile <code>counter_corpus</code> для обстрела проекта.</p>
+    <div class="text-xs text-stone-400">{{ stats.counter_signals }} сигналов</div>
+  </a>
+
+  <a href="/elective-space" class="bg-white border border-stone-200 rounded-lg p-5 hover:shadow-md hover:border-stone-400 transition block">
+    <div class="text-2xl mb-2">🌳</div>
+    <h3 class="font-bold mb-1">Элективное пространство</h3>
+    <p class="text-stone-500 text-sm mb-2">Многоосевая онтология из электривного промпта: деятельности × инструменты × оси × уровни × формы × ритмы. Read-only справочник.</p>
+    <div class="text-xs text-stone-400">6 осей классификации</div>
+  </a>
+
+  <a href="/theory" class="bg-white border border-stone-200 rounded-lg p-5 hover:shadow-md hover:border-stone-400 transition block">
+    <div class="text-2xl mb-2">📚</div>
+    <h3 class="font-bold mb-1">Теория CRUD</h3>
+    <p class="text-stone-500 text-sm mb-2">Регистр архитектурных типов, гипотез, противоречий, мод, контр-сигналов. Add/edit через UI.</p>
+    <div class="text-xs text-stone-400">{{ stats.types }} типов · {{ stats.hypotheses }} гипотез · {{ stats.tensions }} противоречий · {{ stats.modes }} мод</div>
+  </a>
+
+  <div class="bg-stone-50 border border-dashed border-stone-300 rounded-lg p-5">
+    <div class="text-2xl mb-2 text-stone-400">🔧</div>
+    <h3 class="font-bold mb-1 text-stone-500">L1 агенты в регистре</h3>
+    <p class="text-stone-500 text-sm mb-2">9 boot-агентов + любые из Foundry активированные. JSON-схема, kernel-промпт, conflicts/cooperates.</p>
+    <div class="text-xs text-stone-400">{{ stats.l1_agents }} L1 active · {{ stats.stakeholders }} стейкхолдеров</div>
+    <div class="text-xs text-stone-400 mt-2 italic">страница регистра — в backlog</div>
+  </div>
+
+</div>
+
+<div class="mt-8 bg-stone-100 border border-stone-200 rounded p-4 text-sm">
+  <h2 class="font-bold mb-2">Информация о деплое</h2>
+  <table class="text-xs">
+    <tr><td class="text-stone-500 pr-4">VM:</td><td class="font-mono">81.26.176.248</td></tr>
+    <tr><td class="text-stone-500 pr-4">Domain:</td><td class="font-mono">paideia.mindkampf.ru</td></tr>
+    <tr><td class="text-stone-500 pr-4">systemd:</td><td class="font-mono">paideia-web.service · port 8082</td></tr>
+    <tr><td class="text-stone-500 pr-4">Caddy:</td><td class="font-mono">host.docker.internal:8082 (от moderbober-caddy)</td></tr>
+    <tr><td class="text-stone-500 pr-4">БД:</td><td class="font-mono">/opt/paideia/app/db/paideia.db (SQLite + sqlite-vec)</td></tr>
+    <tr><td class="text-stone-500 pr-4">LLM:</td><td class="font-mono">302.ai router · primary gpt-4.1-mini, deep gpt-5, search sonar-pro</td></tr>
+  </table>
+</div>
+{% endblock %}

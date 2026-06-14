@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Твой архив — Paideia{% endblock %}
+{% block content %}
+
+<div class="mb-6"><a href="/" class="text-stone-500 hover:text-stone-900 text-sm">← каталог</a></div>
+
+<div class="flex items-baseline justify-between mb-6">
+  <h1 class="text-2xl font-bold">Архив исходных документов</h1>
+  <div class="text-stone-500 text-sm">{{ stats.chunks }} chunks · {{ stats.files }} файлов</div>
+</div>
+
+<p class="text-stone-500 mb-6 text-sm">
+  Эти файлы из <code>C:/projects/Paideia/</code> заиндексированы для RAG. LLM-агенты
+  (section-filler, wave-runner, hypothesis-rechecker, project-synthesizer)
+  автоматически цитируют их вдобавок к веб-поиску.
+</p>
+
+<form method="get" action="/archive" class="bg-white border border-stone-200 rounded p-4 mb-6">
+  <label class="block text-xs uppercase tracking-wide text-stone-500 mb-1">семантический поиск</label>
+  <div class="flex gap-2">
+    <input name="q" value="{{ query or '' }}" class="flex-1 px-3 py-2 border border-stone-300 rounded text-sm" placeholder="ТюмГУ ролевая модель, агентность 3+, элективы…">
+    <button class="bg-stone-900 text-stone-100 px-4 py-2 rounded text-sm hover:bg-stone-700">искать</button>
+  </div>
+</form>
+
+{% if hits %}
+  <h2 class="font-bold mb-3">Найдено фрагментов: {{ hits|length }}</h2>
+  <ul class="space-y-3 mb-8">
+    {% for h in hits %}
+      <li class="bg-white border border-stone-200 rounded p-4">
+        <div class="flex items-baseline gap-3 mb-2">
+          <span class="font-mono text-xs text-stone-500">{{ h.file_path }}</span>
+          <span class="text-xs text-stone-400">offset {{ h.offset }}</span>
+          <span class="ml-auto text-xs text-stone-400">d={{ h.distance }}</span>
+        </div>
+        <div class="text-sm whitespace-pre-line text-stone-700">{{ h.text }}</div>
+      </li>
+    {% endfor %}
+  </ul>
+{% endif %}
+
+<h2 class="font-bold mb-3">Все файлы ({{ files|length }})</h2>
+<table class="w-full text-sm bg-white border border-stone-200 rounded">
+  <thead class="bg-stone-100 text-stone-500 text-xs uppercase">
+    <tr><th class="text-left px-3 py-2">путь</th><th class="text-left px-3 py-2">формат</th><th class="text-right px-3 py-2">chunks</th></tr>
+  </thead>
+  <tbody>
+    {% for f in files %}
+      <tr class="border-t border-stone-100">
+        <td class="px-3 py-1.5 font-mono text-xs">{{ f.file_path }}</td>
+        <td class="px-3 py-1.5"><span class="pill bg-stone-100 text-stone-600">{{ f.file_kind }}</span></td>
+        <td class="px-3 py-1.5 text-right text-stone-500">{{ f.chunk_count }}</td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% if stats.chunks == 0 %}
+  <div class="mt-6 bg-amber-50 border border-amber-200 rounded p-4 text-sm">
+    Архив пока не проиндексирован. Запусти из консоли:
+    <pre class="mt-2 bg-white p-2 rounded text-xs">python -m scripts.reindex_archive --archive "C:/projects/Paideia"</pre>
+  </div>
+{% endif %}
+
+{% endblock %}

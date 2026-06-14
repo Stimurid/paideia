@@ -1,0 +1,381 @@
+{% extends "base.html" %}
+{% block title %}Paideia — главная{% endblock %}
+{% block content %}
+
+<div class="mb-6">
+  <h1 class="text-3xl font-bold mb-1">Paideia</h1>
+  <p class="text-stone-500 text-sm">{{ stats.cases }} кейсов корпуса · {{ stats.types }} типов · {{ stats.hypotheses }} гипотез · {{ stats.tensions }} противоречий · {{ stats.modes }} мод · {{ stats.counter_signals }} контр-сигналов</p>
+</div>
+
+{% if role_block %}
+<div class="bg-white border-l-4 border-violet-500 rounded-r-lg shadow-sm p-4 mb-6">
+  <div class="flex items-start justify-between gap-3 flex-wrap">
+    <div class="flex-1 min-w-0">
+      <div class="flex items-center gap-2 mb-1">
+        <span class="font-bold text-lg">{{ role_block.title }}</span>
+        <a href="/onboarding" class="text-xs text-stone-400 hover:text-violet-700">сменить роль</a>
+        {% if active_course %}
+          <span class="pill bg-emerald-100 text-emerald-700">активный курс: <a href="/course/{{ active_course }}" class="underline">{{ active_course[:14] }}…</a></span>
+        {% endif %}
+      </div>
+      <p class="text-sm text-stone-600 mb-3">{{ role_block.hint }}</p>
+      <div class="flex flex-wrap gap-2">
+        <a href="{{ role_block.primary_cta.url }}" class="bg-violet-700 text-white text-sm px-4 py-2 rounded font-semibold hover:bg-violet-600">
+          {{ role_block.primary_cta.label }}
+        </a>
+        {% for s in role_block.secondary %}
+          <a href="{{ s.url }}" class="text-sm bg-stone-100 text-stone-700 px-3 py-2 rounded hover:bg-violet-100">{{ s.label }}</a>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% else %}
+<div class="bg-amber-50 border border-amber-200 rounded p-3 mb-6 text-sm flex items-center justify-between gap-2 flex-wrap">
+  <span>👋 Первый раз тут? <a href="/onboarding" class="text-violet-700 underline font-semibold">Выбери роль</a> — интерфейс подстроится.</span>
+</div>
+{% endif %}
+
+<!-- Главный LLM-консьерж -->
+<div class="bg-gradient-to-br from-violet-50 to-blue-50 border border-violet-200 rounded-xl p-6 mb-8 shadow-sm">
+  <div class="flex gap-2 mb-4">
+    <button onclick="setMode('explore')" id="tab-explore"
+            class="px-4 py-2 rounded-t-lg text-sm font-semibold bg-white border border-stone-300 border-b-white">
+      🔍 Я просто посмотреть
+    </button>
+    <button onclick="setMode('project')" id="tab-project"
+            class="px-4 py-2 rounded-t-lg text-sm font-semibold bg-stone-100 text-stone-500">
+      💼 У меня проект
+    </button>
+  </div>
+
+  <div class="bg-white border border-stone-300 rounded-lg p-4 -mt-px">
+    <textarea id="ask-input" rows="3" placeholder=""
+              class="w-full px-3 py-2 border border-stone-200 rounded text-sm focus:outline-none focus:border-violet-500"></textarea>
+
+    <div id="project-extras" class="hidden mt-3">
+      <label class="block text-xs uppercase text-stone-500 mb-1">или загрузи файл (txt/md/pdf/docx)</label>
+      <input id="ask-file" type="file" accept=".txt,.md,.pdf,.docx,.pptx" class="text-sm">
+    </div>
+
+    <div class="flex gap-2 mt-3 items-center flex-wrap">
+      <button onclick="askConcierge()" id="ask-btn"
+              class="bg-violet-700 text-white px-5 py-2 rounded text-sm font-semibold hover:bg-violet-600">
+        ▶ Спросить
+      </button>
+
+      <!-- F10: model selector -->
+      <select id="model-role" onchange="updateModelHint()"
+              class="text-xs border border-stone-300 rounded px-2 py-1 bg-white"
+              title="Выбор модели — fast быстро и дёшево, deep подробно и дороже, search с веб-поиском">
+        <option value="fast">🚀 fast · gpt-4.1-mini · ~3-5 с · ≈$0.002</option>
+        <option value="deep">🧠 deep · gpt-5 · ~30-60 с · ≈$0.05</option>
+        <option value="search">🌐 search · sonar-pro · ~10-20 с · ≈$0.02</option>
+      </select>
+
+      <span id="ask-status" class="text-stone-500 text-sm"></span>
+      <span class="ml-auto text-xs text-stone-400" id="mode-hint">gpt-4.1-mini · ~3-5 с</span>
+    </div>
+
+    <!-- Suggested prompts -->
+    <div class="mt-4 pt-3 border-t border-stone-100" id="suggested-prompts">
+      <div class="text-xs uppercase text-stone-400 mb-2" id="suggested-label">Попробуй спросить</div>
+      <div class="flex flex-wrap gap-2" id="suggested-buttons">
+        <!-- заполняется JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Результат -->
+  <div id="ask-result" class="hidden mt-4 bg-white border border-stone-300 rounded-lg p-4"></div>
+</div>
+
+<script>
+const USER_ROLE = {{ (user_role or '') | tojson }};
+
+const SUGGESTED_BY_ROLE = {
+  teacher: {
+    explore: [
+      "Покажи кейсы внедрения AI в магистратуре по data science",
+      "Какие приёмы ТРИЗ работают для конфликта \"глубина vs массовость\"",
+      "Найди кейсы где AI-тьютор провалился — что пошло не так",
+      "Как организовать peer-review с AI-ассистентом",
+    ],
+    project: [
+      "У меня электив \"введение в продуктовый менеджмент\" для 2 курса, 24 студента, 12 недель",
+      "Хочу спроектировать интенсив на 3 дня по prompt engineering для преподавателей",
+      "Курс \"критическое мышление в эпоху LLM\" — что взять из корпуса",
+    ],
+  },
+  methodologist: {
+    explore: [
+      "Какие гипотезы корпуса сейчас слабее всего",
+      "Покажи противоречия типа autonomy-vs-control и кейсы на них",
+      "Что нового в последней волне относительно предыдущей",
+      "Где в корпусе пересекаются типы C и D, какие гибриды",
+    ],
+    project: [
+      "Хочу сформулировать H6 про <гипотеза> — найди supports и contradicts",
+      "Помоги собрать корпус провалов отдельной фигурой для контр-обстрела",
+    ],
+  },
+  admin: {
+    explore: [
+      "Какие модели работают для университета 10к студентов и бюджета X",
+      "Что в корпусе про governance и compliance для AI в LMS",
+      "Сравни типы B и F по стоимости развёртывания и риску",
+    ],
+    project: [
+      "Хочу собрать программу переподготовки методистов под AI-инструменты",
+      "Кампусная стратегия по AI на 3 года, фокус на инженерию и бизнес-школы",
+      "Какие стейкхолдеры будут возражать против моего замысла X",
+    ],
+  },
+  student: {
+    explore: [
+      "Объясни простыми словами что такое \"зона ближайшего развития\"",
+      "Какие есть учебники по теории обучения в библиотеке",
+      "Что было на последней лекции активного курса",
+      "Помоги разобрать домашнее задание по теме X",
+    ],
+    project: [],
+  },
+};
+
+const SUGGESTED_FALLBACK = {
+  explore: [
+    "Покажи кейсы внедрения AI в магистратуре по data science",
+    "Что в корпусе есть про обстрел программы стейкхолдерами",
+    "Какие гипотезы корпуса сейчас слабее всего",
+    "Объясни архитектурный тип C: pedagogy-shaped dialogue",
+    "Какие приёмы ТРИЗ работают для конфликта \"глубина vs массовость\"",
+    "Найди кейсы где AI-тьютор провалился",
+  ],
+  project: [
+    "У меня электив \"введение в продуктовый менеджмент\" для 2 курса, 24 студента, 12 недель",
+    "Хочу спроектировать интенсив на 3 дня по prompt engineering для преподавателей",
+    "Помоги собрать программу переподготовки методистов под AI-инструменты",
+    "Курс \"критическое мышление в эпоху LLM\" — что взять из корпуса",
+    "Лаборатория промптинга — какие кейсы аналоги, какие риски",
+  ],
+};
+
+const SUGGESTED = SUGGESTED_BY_ROLE[USER_ROLE] || SUGGESTED_FALLBACK;
+
+let currentMode = 'explore';
+
+function setMode(m) {
+  currentMode = m;
+  document.getElementById('tab-explore').className = m === 'explore'
+    ? 'px-4 py-2 rounded-t-lg text-sm font-semibold bg-white border border-stone-300 border-b-white'
+    : 'px-4 py-2 rounded-t-lg text-sm font-semibold bg-stone-100 text-stone-500';
+  document.getElementById('tab-project').className = m === 'project'
+    ? 'px-4 py-2 rounded-t-lg text-sm font-semibold bg-white border border-stone-300 border-b-white'
+    : 'px-4 py-2 rounded-t-lg text-sm font-semibold bg-stone-100 text-stone-500';
+  document.getElementById('project-extras').classList.toggle('hidden', m !== 'project');
+  document.getElementById('ask-input').placeholder = m === 'project'
+    ? 'Опиши свой замысел: что хочешь сделать, для кого, в каком контексте...'
+    : 'Спроси что угодно про корпус, теорию, методы, конкретные кейсы...';
+  renderSuggested();
+}
+
+function renderSuggested() {
+  const box = document.getElementById('suggested-buttons');
+  box.innerHTML = SUGGESTED[currentMode].map(s =>
+    `<button onclick="useSuggestion(${JSON.stringify(s).replace(/"/g,'&quot;')})"
+             class="text-xs bg-stone-100 hover:bg-violet-100 text-stone-700 px-3 py-1 rounded">${s}</button>`
+  ).join('');
+}
+
+function useSuggestion(text) {
+  document.getElementById('ask-input').value = text;
+  askConcierge();
+}
+
+function updateModelHint() {
+  const v = document.getElementById('model-role').value;
+  const hint = {fast: 'gpt-4.1-mini · ~3-5 с', deep: 'gpt-5 · ~30-60 с', search: 'sonar-pro · ~10-20 с'}[v];
+  document.getElementById('mode-hint').textContent = hint;
+}
+
+async function askConcierge() {
+  let text = document.getElementById('ask-input').value.trim();
+  if (currentMode === 'project') {
+    const f = document.getElementById('ask-file').files[0];
+    if (f) {
+      const ft = await f.text().catch(() => '');
+      if (ft) text = (text ? text + '\n\n--- файл ---\n' : '') + ft.slice(0, 8000);
+    }
+  }
+  if (!text) { document.getElementById('ask-status').textContent = 'пусто'; return; }
+  const btn = document.getElementById('ask-btn');
+  btn.disabled = true;
+  document.getElementById('ask-status').textContent = '⏳ думаю...';
+  document.getElementById('ask-result').classList.add('hidden');
+  try {
+    const modelRole = document.getElementById('model-role').value;
+    const r = await fetch('/api/ask', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({text, mode: currentMode, model_role: modelRole}),
+    });
+    if (r.status === 429) {
+      const e = await r.json();
+      document.getElementById('ask-status').innerHTML = '⚠️ <span class="text-rose-700">лимит исчерпан</span>';
+      const box = document.getElementById('ask-result');
+      box.innerHTML = `<div class="bg-rose-50 border border-rose-200 rounded p-4 text-sm">
+        <strong>${e.message || 'Rate limit'}</strong><br>
+        <a href="/support" class="text-violet-700 hover:underline">→ Поддержать проект</a> или ввести 🔑 код от Тимура — лимиты снимаются.
+      </div>`;
+      box.classList.remove('hidden');
+      return;
+    }
+    if (!r.ok) throw new Error(await r.text());
+    const d = await r.json();
+    // авто-подсказка переключиться на deep на сложных intent
+    const heavyIntents = ['compare_two', 'theory_question', 'dropped_project', 'triz_question'];
+    if (modelRole === 'fast' && d.intent && heavyIntents.includes(d.intent)) {
+      d.summary = (d.summary || '') + '\n\n💡 *Это сложный вопрос — попробуй переключить на 🧠 deep для более глубокого ответа.*';
+    }
+    // обновим счётчик токенов в навбаре сразу после вызова
+    if (window.refreshTokens) setTimeout(refreshTokens, 500);
+    document.getElementById('ask-status').textContent = `✓ ${((d.duration_ms||0)/1000).toFixed(1)} с · ${d.intent}`;
+    const box = document.getElementById('ask-result');
+    box.innerHTML = `
+      <div class="text-sm text-stone-800 mb-4 leading-relaxed">${d.summary || ''}</div>
+      ${d.suggested_actions && d.suggested_actions.length ? `
+        <div class="text-xs uppercase text-stone-500 font-semibold mb-2">что сделать дальше</div>
+        <div class="flex flex-col gap-2">
+          ${d.suggested_actions.map(a => `
+            <a ${a.url ? `href="${a.url}"` : 'href="#"'}
+               class="flex items-start gap-3 p-3 border border-stone-200 rounded hover:bg-violet-50 hover:border-violet-400 transition">
+              <span class="text-lg">${({'navigate':'→','run_agent':'▶','open_wizard':'🧭','quick_search':'🔍','external':'↗'})[a.action_kind] || '•'}</span>
+              <div class="flex-1">
+                <div class="font-semibold text-sm">${a.label}</div>
+                ${a.why ? `<div class="text-xs text-stone-500 mt-0.5">${a.why}</div>` : ''}
+              </div>
+            </a>
+          `).join('')}
+        </div>
+      ` : ''}
+      ${d.follow_up_questions && d.follow_up_questions.length ? `
+        <div class="mt-3 pt-3 border-t border-stone-200">
+          <div class="text-xs uppercase text-stone-500 font-semibold mb-2">или уточни</div>
+          ${d.follow_up_questions.map(q => `<button onclick="useSuggestion(${JSON.stringify(q).replace(/"/g,'&quot;')})" class="block text-left text-sm text-violet-700 hover:underline">→ ${q}</button>`).join('')}
+        </div>
+      ` : ''}
+    `;
+    box.classList.remove('hidden');
+  } catch (e) {
+    document.getElementById('ask-status').innerHTML = `<span class="text-rose-600">ошибка: ${e.message.slice(0,80)}</span>`;
+  } finally { btn.disabled = false; }
+}
+
+renderSuggested();
+</script>
+
+{% if my_projects %}
+  <!-- Returning user: continue last project -->
+  <div class="bg-violet-50 border border-violet-200 rounded-lg p-5 mb-8">
+    <div class="flex items-baseline justify-between mb-3">
+      <h2 class="font-bold text-lg">Продолжить</h2>
+      <a href="/projects" class="text-stone-500 hover:text-stone-900 text-sm">все проекты ({{ my_projects | length }}) →</a>
+    </div>
+    <div class="grid grid-cols-2 lg:grid-cols-3 gap-3">
+      {% for p in my_projects[:3] %}
+        <a href="/project/{{ p.id }}/dashboard" class="bg-white border border-violet-200 rounded p-3 hover:border-violet-500 hover:shadow transition">
+          <div class="font-semibold text-sm">{{ p.name }}</div>
+          <div class="text-xs text-stone-500 mt-1">→ Dashboard</div>
+        </a>
+      {% endfor %}
+      <a href="/project/new/wizard" class="border-2 border-dashed border-violet-300 rounded p-3 text-violet-700 hover:border-violet-500 hover:bg-violet-100 text-center text-sm font-semibold flex items-center justify-center">
+        + новый
+      </a>
+    </div>
+  </div>
+{% else %}
+  <!-- New user: big CTA -->
+  <div class="bg-violet-50 border border-violet-200 rounded-lg p-8 mb-8 text-center">
+    <div class="text-5xl mb-3">🧭</div>
+    <h2 class="text-xl font-bold mb-2">Начни с создания проекта</h2>
+    <p class="text-stone-600 mb-5 max-w-xl mx-auto">
+      Образовательная инициатива поверх корпуса. Визард задаст 3-5 вопросов
+      и за 60 секунд соберёт 18-секционный канвас + EducationalSystemModel.
+    </p>
+    <a href="/project/new/wizard" class="inline-block bg-violet-700 text-white px-6 py-3 rounded font-semibold hover:bg-violet-600">
+      🚀 Создать проект (визард)
+    </a>
+    <div class="mt-4 text-xs text-stone-500">
+      или сначала <a href="/catalog" class="underline hover:text-stone-900">изучить корпус</a> /
+      <a href="/methods" class="underline hover:text-stone-900">40 ТРИЗ-приёмов</a>
+    </div>
+  </div>
+{% endif %}
+
+<!-- 4 ролевых входа -->
+<h2 class="font-bold mb-3 text-sm uppercase tracking-wide text-stone-500">Что хочешь сделать</h2>
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
+  <a href="/project/new/wizard" class="bg-white border border-stone-200 rounded-lg p-4 hover:shadow hover:border-violet-400 transition">
+    <div class="text-2xl mb-2">🎓</div>
+    <div class="font-semibold text-sm">Спроектировать курс</div>
+    <div class="text-xs text-stone-500 mt-1">Я преподаватель / методист</div>
+  </a>
+  <a href="/catalog" class="bg-white border border-stone-200 rounded-lg p-4 hover:shadow hover:border-blue-400 transition">
+    <div class="text-2xl mb-2">🔬</div>
+    <div class="font-semibold text-sm">Изучить корпус</div>
+    <div class="text-xs text-stone-500 mt-1">Я исследователь</div>
+  </a>
+  <a href="/match" class="bg-white border border-stone-200 rounded-lg p-4 hover:shadow hover:border-emerald-400 transition">
+    <div class="text-2xl mb-2">🎯</div>
+    <div class="font-semibold text-sm">Найти аналоги</div>
+    <div class="text-xs text-stone-500 mt-1">Описать ситуацию → топ-N</div>
+  </a>
+  <a href="/service" class="bg-white border border-stone-200 rounded-lg p-4 hover:shadow hover:border-stone-400 transition">
+    <div class="text-2xl mb-2">⚙️</div>
+    <div class="font-semibold text-sm">Сервисный режим</div>
+    <div class="text-xs text-stone-500 mt-1">Foundry / аудит / админ-инструменты</div>
+  </a>
+</div>
+
+{% if recent_activity %}
+<!-- Recent activity -->
+<h2 class="font-bold mb-3 text-sm uppercase tracking-wide text-stone-500">Последняя активность</h2>
+<ul class="space-y-1 mb-8">
+  {% for a in recent_activity[:10] %}
+    <li class="bg-white border border-stone-200 rounded p-2 text-sm flex items-center gap-3">
+      <span class="text-base">{{ a.icon }}</span>
+      <span class="flex-1">{% if a.url %}<a href="{{ a.url }}" class="hover:underline">{{ a.label }}</a>{% else %}{{ a.label }}{% endif %}</span>
+      <span class="text-xs text-stone-400">{{ a.ts }}</span>
+    </li>
+  {% endfor %}
+</ul>
+{% endif %}
+
+<!-- Сводка теории — оставляем как справочник -->
+<div class="grid grid-cols-2 gap-6">
+  <div>
+    <h2 class="font-bold mb-3 text-sm uppercase tracking-wide text-stone-500">Гипотезы корпуса</h2>
+    <ul class="space-y-2">
+      {% for h in theory.hypotheses %}
+        <li class="bg-white border border-stone-200 rounded p-3 flex items-center gap-3 text-sm">
+          <span class="font-mono text-xs text-stone-400 w-6">{{ h.id }}</span>
+          <a href="/hypothesis/{{ h.id }}" class="flex-1 hover:underline">{{ h.name }}</a>
+          {% set color = {'supported':'bg-emerald-100 text-emerald-700','partially-supported':'bg-amber-100 text-amber-700','weakened':'bg-rose-100 text-rose-700','proposed':'bg-stone-100 text-stone-700'}.get(h.status_current, 'bg-stone-100 text-stone-700') %}
+          <span class="pill {{ color }}">{{ h.status_current }}</span>
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
+  <div>
+    <h2 class="font-bold mb-3 text-sm uppercase tracking-wide text-stone-500">Архитектурные типы</h2>
+    <ul class="space-y-2">
+      {% for t in theory.types %}
+        <li class="bg-white border border-stone-200 rounded p-3 flex items-center gap-3 text-sm">
+          <span class="pill pill-{{ t.id }} text-xs">{{ t.id }}</span>
+          <a href="/type/{{ t.id }}" class="flex-1 hover:underline">{{ t.name }}</a>
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+
+{% endblock %}

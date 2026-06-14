@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Method Library — Paideia{% endblock %}
+{% block content %}
+
+<div class="mb-4 flex items-center gap-3">
+  <a href="/" class="text-stone-500 hover:text-stone-900 text-sm">← главная</a>
+  <h1 class="text-xl font-bold">🔧 Method Library</h1>
+  <span class="text-stone-500 text-sm">40 ТРИЗ-приёмов в педагогической интерпретации</span>
+</div>
+
+<form method="get" action="/methods" class="bg-white border border-stone-200 rounded p-3 mb-4 flex gap-3 items-end text-sm">
+  <div class="flex-1">
+    <label class="block text-xs uppercase text-stone-500 mb-1">поиск</label>
+    <input name="q" value="{{ q }}" class="w-full px-3 py-1 border border-stone-300 rounded" placeholder="ключевое слово в имени, классическом или педагогическом описании">
+  </div>
+  <div>
+    <label class="block text-xs uppercase text-stone-500 mb-1">applies_to</label>
+    <select name="applies_to" class="px-2 py-1 border border-stone-300 rounded text-sm">
+      <option value="">— любое —</option>
+      {% for f in fields %}<option value="{{ f }}" {% if applies_to == f %}selected{% endif %}>{{ f }}</option>{% endfor %}
+    </select>
+  </div>
+  <button class="bg-stone-900 text-stone-100 px-3 py-1 rounded">фильтр</button>
+  <a href="/methods" class="text-stone-500 text-xs hover:underline">сбросить</a>
+</form>
+
+<div class="text-xs text-stone-500 mb-3">показано: <strong>{{ methods | length }}</strong> из 40</div>
+
+<ul class="space-y-2">
+  {% for m in methods %}
+  <li class="bg-white border border-stone-200 rounded p-4">
+    <div class="flex items-center gap-2 mb-2">
+      <span class="font-mono text-xs text-stone-400 w-8">{{ m.id.split("-")[0] }}</span>
+      <strong class="text-base">{{ m.name_ru }}</strong>
+      {% for f in m.applies_to %}<span class="pill bg-stone-100 text-stone-600 text-xs">{{ f }}</span>{% endfor %}
+    </div>
+    {% if m.classic %}<div class="text-xs text-stone-500 italic mb-2">классически: {{ m.classic }}</div>{% endif %}
+    <div class="text-sm prose prose-sm max-w-none whitespace-pre-line">{{ m.pedagogical }}</div>
+    <div class="flex gap-3 mt-3 text-xs text-stone-500">
+      {% if m.when_useful %}<span><strong>когда:</strong> {{ m.when_useful }}</span>{% endif %}
+    </div>
+    {% if m.examples_from_corpus %}
+    <div class="mt-2 text-xs">
+      <span class="text-stone-500">примеры из корпуса:</span>
+      {% for cid in m.examples_from_corpus %}
+        <a href="/case/{{ cid }}" class="text-blue-600 hover:underline ml-1">{{ cid }}</a>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </li>
+  {% endfor %}
+</ul>
+
+{% endblock %}

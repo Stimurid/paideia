@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}Конфликты концептов — Paideia{% endblock %}
+{% block content %}
+
+<div class="mb-4">
+  <a href="/library" class="text-stone-500 hover:text-stone-900 text-sm">← библиотека</a>
+  <h1 class="text-2xl font-bold mt-1">⚔️ Пары концептов</h1>
+  <p class="text-stone-500 text-sm">
+    F1-селектор кластеризует близкие по embedding концепты библиотеки и LLM классифицирует пару.
+    Используется в RAG-pipeline концьержа и Discuss-агента для предупреждения «есть две школы».
+  </p>
+</div>
+
+{% set rel_styles = {
+  'conflicts':  ('⚔️',  'bg-rose-100 text-rose-800 border-rose-300'),
+  'complements':('🤝',  'bg-emerald-100 text-emerald-800 border-emerald-300'),
+  'equivalent': ('≡',   'bg-stone-100 text-stone-700 border-stone-300'),
+  'unrelated':  ('×',   'bg-stone-50 text-stone-500 border-stone-200'),
+} %}
+
+<div class="bg-stone-100 border border-stone-200 rounded p-3 mb-4 text-sm flex gap-4 flex-wrap items-center">
+  <span><strong>{{ stats.concepts_embedded }}</strong> / {{ stats.concepts_total }} концептов embedded</span>
+  <span class="text-stone-400">·</span>
+  {% for rel, n in stats.by_relation.items() %}
+    {% set icon, cls = rel_styles.get(rel, ('•', 'bg-stone-100')) %}
+    <a href="/library/conflicts?relation={{ rel }}"
+       class="pill {% if rel == filter_relation %}{{ cls }} font-bold{% else %}bg-stone-100 text-stone-700{% endif %}">
+      {{ icon }} {{ rel }}: <strong>{{ n }}</strong>
+    </a>
+  {% endfor %}
+  <form method="post" action="/api/selector/rebuild" class="ml-auto">
+    <button class="text-xs bg-violet-100 text-violet-700 px-3 py-1 rounded hover:bg-violet-200"
+            onclick="this.disabled=true; this.textContent='⏳ пересобираю...'; this.form.submit();">
+      🔄 пересобрать всё (LLM)
+    </button>
+  </form>
+</div>
+
+{% if pairs %}
+  <ul class="space-y-3">
+    {% for p in pairs %}
+      {% set icon, cls = rel_styles.get(p.relation, ('•', 'bg-stone-100')) %}
+      <li class="bg-white border border-stone-200 rounded-lg p-4">
+        <div class="flex items-baseline gap-2 mb-2 flex-wrap">
+          <span class="pill {{ cls }}">{{ icon }} {{ p.relation }}</span>
+          {% if p.school_a or p.school_b %}
+            <span class="text-xs text-stone-500">
+              <strong class="text-rose-700">{{ p.school_a or '?' }}</strong>
+              vs
+              <strong class="text-violet-700">{{ p.school_b or '?' }}</strong>
+            </span>
+          {% endif %}
+          <span class="text-xs text-stone-400 ml-auto">similarity {{ "%.3f" % p.similarity }}</span>
+        </div>
+
+        {% if p.rationale %}
+          <p class="text-sm text-stone-700 italic mb-3">{{ p.rationale }}</p>
+        {% endif %}
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+          <div class="border-l-2 border-rose-300 pl-3">
+            <div class="font-semibold">{{ p.a_name }}</div>
+            <div class="text-xs text-stone-500 mb-1">📚 {{ p.a_book }} · {{ p.a_authors or '?' }}</div>
+            {% if p.a_def %}<div class="text-xs text-stone-700">{{ p.a_def[:300] }}{% if p.a_def | length > 300 %}…{% endif %}</div>{% endif %}
+          </div>
+          <div class="border-l-2 border-violet-300 pl-3">
+            <div class="font-semibold">{{ p.b_name }}</div>
+            <div class="text-xs text-stone-500 mb-1">📚 {{ p.b_book }} · {{ p.b_authors or '?' }}</div>
+            {% if p.b_def %}<div class="text-xs text-stone-700">{{ p.b_def[:300] }}{% if p.b_def | length > 300 %}…{% endif %}</div>{% endif %}
+          </div>
+        </div>
+      </li>
+    {% endfor %}
+  </ul>
+{% else %}
+  <div class="bg-amber-50 border border-amber-200 rounded p-6 text-center text-sm">
+    {% if stats.by_relation %}
+      Для отношения «{{ filter_relation }}» пар не найдено. Попробуй другую вкладку выше.
+    {% else %}
+      ⚙️ Селектор ещё не запускался. Нажми «пересобрать всё» — LLM-классификация ~10 минут на 700+ концептов.
+    {% endif %}
+  </div>
+{% endif %}
+
+{% endblock %}

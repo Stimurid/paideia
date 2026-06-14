@@ -1,0 +1,439 @@
+# 40 ТРИЗ-приёмов разрешения противоречий в педагогической интерпретации.
+# Источник базовых формулировок: ТРИЗ (Альтшуллер).
+# Педагогическая адаптация: Paideia v3, опирается на корпус кейсов
+# (ut-sage, nyu-langone-genai-studio, tyumgu-bio-behavior, и др.).
+
+methods:
+  - id: "01-segmentation"
+    name_ru: "Дробление"
+    classic: "Разделить объект на независимые части"
+    pedagogical: |
+      Разделить курс на независимые модули, которые могут жить отдельно
+      и собираться в разные траектории. Альтернатива: разделить роль
+      преподавателя на специализированные функции (картограф / медиатор /
+      хранитель мотивации — модель ТюмГУ).
+    applies_to: [transmission, working_organ, flows]
+    examples_from_corpus: ["tyumgu-sas-ai-program", "anthology-bb-conversation"]
+    when_useful: "когда курс перегружен и один преподаватель не справляется"
+
+  - id: "02-extraction"
+    name_ru: "Вынесение"
+    classic: "Отделить мешающее свойство"
+    pedagogical: |
+      Вынести непедагогическую нагрузку (проверка типовых заданий,
+      ответы на FAQ, навигация по материалам) в AI-роли, оставив
+      преподавателю содержательную работу.
+    applies_to: [working_organ, controls]
+    examples_from_corpus: ["ut-sage", "khan-khanmigo"]
+    when_useful: "когда содержательная работа тонет в рутине"
+
+  - id: "03-local-quality"
+    name_ru: "Местное качество"
+    classic: "Разные части — разные функции"
+    pedagogical: |
+      Разные модули курса работают в разных режимах: лекция — массовая,
+      проектная работа — кохорта 8 человек, рефлексия — индивидуальная.
+      Один формат не должен покрывать все цели.
+    applies_to: [transmission, flows]
+    examples_from_corpus: ["minerva-university"]
+    when_useful: "когда все занятия идут в одном формате и часть целей не достигается"
+
+  - id: "04-asymmetry"
+    name_ru: "Асимметрия"
+    classic: "Перейти от симметричной формы к асимметричной"
+    pedagogical: |
+      Отказаться от равномерной нагрузки — выделить «пиковые» недели
+      (интенсивный спринт, защита проекта) и «фоновые» (самостоятельная
+      работа). Асимметрия даёт энергию там, где симметрия её гасит.
+    applies_to: [flows, transmission]
+    examples_from_corpus: []
+    when_useful: "когда студенты «выгорают» к середине семестра"
+
+  - id: "05-merging"
+    name_ru: "Объединение"
+    classic: "Объединить однородные объекты"
+    pedagogical: |
+      Объединить несколько дисциплин в один проектный модуль с общей
+      сквозной задачей. Студент решает одну задачу средствами разных
+      дисциплин — как в инженерной практике.
+    applies_to: [transmission, function]
+    examples_from_corpus: ["kaist-engineering", "mit"]
+    when_useful: "когда дисциплины изолированы и студент не видит связи"
+
+  - id: "06-universality"
+    name_ru: "Универсальность"
+    classic: "Объект выполняет несколько функций"
+    pedagogical: |
+      Один артефакт студента (например, портфолио) одновременно служит:
+      инструментом оценки, материалом для работодателя, рефлексивным
+      следом, заявкой на следующий уровень.
+    applies_to: [verification, function]
+    examples_from_corpus: ["minerva-university"]
+    when_useful: "когда отдельная контрольная требует отдельной подготовки"
+
+  - id: "07-nesting"
+    name_ru: "Матрёшка"
+    classic: "Один объект помещён в другой"
+    pedagogical: |
+      Вложить мини-курс в большой проект (курс «инструмент» внутри курса
+      «практика»). Студент изучает по необходимости, а не «впрок».
+    applies_to: [function, transmission]
+    examples_from_corpus: ["coursera-coach"]
+    when_useful: "когда теория преподаётся отдельно от применения"
+
+  - id: "08-counterweight"
+    name_ru: "Антивес"
+    classic: "Компенсировать вес взаимодействием со средой"
+    pedagogical: |
+      Использовать внешнюю мотивацию (конкурс, грант, публикация) как
+      «лифт» для проектной работы. Среда работает за преподавателя.
+    applies_to: [controls, flows]
+    examples_from_corpus: []
+    when_useful: "когда внутренней мотивации студентов мало"
+
+  - id: "09-preliminary-anti-action"
+    name_ru: "Предварительное антидействие"
+    classic: "Применить заранее противодействие"
+    pedagogical: |
+      Сначала показать студентам типичные провалы (бракованные ответы LLM,
+      slop-тексты, плохие проекты) — и только потом дать задание. Это
+      vaccinates от воспроизводства этих провалов.
+    applies_to: [transmission, function]
+    examples_from_corpus: ["anthology-bb-conversation"]
+    when_useful: "когда студенты воспроизводят типовые ошибки"
+
+  - id: "10-preliminary-action"
+    name_ru: "Предварительное действие"
+    classic: "Заранее выполнить часть действия"
+    pedagogical: |
+      Pre-class работа (чтение, видео, мини-квиз) до семинара —
+      обязательное условие участия. Семинар не «введение в тему», а
+      обсуждение уже освоенного.
+    applies_to: [transmission, flows]
+    examples_from_corpus: []
+    when_useful: "когда семинар становится повторной лекцией"
+
+  - id: "11-prior-cushioning"
+    name_ru: "Заранее подложенная подушка"
+    classic: "Подготовить страховку"
+    pedagogical: |
+      Заранее заготовить резервный формат / резервного преподавателя /
+      резервный материал на случай провала ключевого блока. Особенно для
+      AI-зависимых элементов: что делаем если API недоступен.
+    applies_to: [controls, working_organ]
+    examples_from_corpus: ["surf-edugenai"]
+    when_useful: "когда курс критически зависит от одной системы"
+
+  - id: "12-equipotentiality"
+    name_ru: "Эквипотенциальность"
+    classic: "Изменить условия так, чтобы не нужно было поднимать/опускать"
+    pedagogical: |
+      Сделать сложность задач адаптивной к уровню студента (через AI),
+      чтобы «поднимать-опускать» планку не надо было вручную для каждой
+      группы.
+    applies_to: [flows, transmission]
+    examples_from_corpus: ["khan-khanmigo", "genmentor"]
+    when_useful: "когда группы сильно неоднородны по уровню"
+
+  - id: "13-inversion"
+    name_ru: "Наоборот"
+    classic: "Поменять действия на обратные"
+    pedagogical: |
+      Flipped classroom: дома — лекция, в классе — практика. Или: студенты
+      сами становятся преподавателями для младших курсов. Или: оценивает
+      не преподаватель, а сообщество выпускников.
+    applies_to: [transmission, working_organ, controls]
+    examples_from_corpus: ["minerva-university", "tyumgu-sas-ai-program"]
+    when_useful: "когда стандартная схема не даёт нужного эффекта"
+
+  - id: "14-spheroidality"
+    name_ru: "Сфероидальность"
+    classic: "Заменить прямолинейные части криволинейными"
+    pedagogical: |
+      Заменить линейную последовательность модулей циклической
+      (повторение тем на более глубоком уровне — спиральная программа
+      по Брунеру).
+    applies_to: [flows, transmission]
+    examples_from_corpus: []
+    when_useful: "когда сложные темы не успевают «осесть» после одного прохода"
+
+  - id: "15-dynamicity"
+    name_ru: "Динамичность"
+    classic: "Объект меняется в процессе работы"
+    pedagogical: |
+      Программа адаптируется по ходу: после диагностики первой недели
+      перестраиваются вторая, после защиты MVP — траектория продолжения.
+      AI-роли помогают перестройке без overload преподавателя.
+    applies_to: [flows, working_organ]
+    examples_from_corpus: ["genmentor", "graphmasal"]
+    when_useful: "когда программа застывает в исходном плане несмотря на сигналы"
+
+  - id: "16-partial-action"
+    name_ru: "Частичное или избыточное действие"
+    classic: "Сделать чуть больше или чуть меньше"
+    pedagogical: |
+      Избыточное: дать больше задач, чем нужно — пусть студенты выбирают.
+      Частичное: оставить недосказанность в материале — пусть достраивают.
+    applies_to: [transmission, function]
+    examples_from_corpus: []
+    when_useful: "когда нужна агентность студента, но всё расписано"
+
+  - id: "17-another-dimension"
+    name_ru: "Переход в другое измерение"
+    classic: "Из 1D в 2D, из плоскости в пространство"
+    pedagogical: |
+      Из текстового курса — в практическую студию, из аудитории — в полевую
+      работу, из индивидуальной работы — в командную, из учебного материала —
+      в реальный заказ.
+    applies_to: [transmission, function]
+    examples_from_corpus: ["mit", "kaist-engineering"]
+    when_useful: "когда курс «теоретический», а нужна перенос-способность"
+
+  - id: "18-mechanical-vibrations"
+    name_ru: "Использование колебаний"
+    classic: "Колебательные процессы вместо постоянных"
+    pedagogical: |
+      Чередование интенсива и рефлексии, активной работы и тишины,
+      группового и одиночного. Ритм важнее равномерности.
+    applies_to: [flows, transmission]
+    examples_from_corpus: []
+    when_useful: "когда курс монотонный и студенты «отключаются»"
+
+  - id: "19-periodic-action"
+    name_ru: "Периодическое действие"
+    classic: "От непрерывного к импульсному"
+    pedagogical: |
+      Регулярные короткие сессии лучше длинных нерегулярных. 15 мин
+      ежедневной практики против 3 часов раз в неделю — особенно для
+      языков, кода, расчётов.
+    applies_to: [flows]
+    examples_from_corpus: ["duolingo-max"]
+    when_useful: "когда навык должен «уложиться», а не «понянуться»"
+
+  - id: "20-continuity-of-useful-action"
+    name_ru: "Непрерывность полезного действия"
+    classic: "Работа без холостого хода"
+    pedagogical: |
+      AI-тьютор доступен 24/7, чтобы вопрос не «остывал» до следующей
+      пары. Continuous feedback вместо «оценка в конце семестра».
+    applies_to: [working_organ, flows]
+    examples_from_corpus: ["ut-sage", "khan-khanmigo"]
+    when_useful: "когда между сессиями студенты теряют контакт с материалом"
+
+  - id: "21-rushing-through"
+    name_ru: "Проскок"
+    classic: "Скорость как способ избежать вреда"
+    pedagogical: |
+      Очень сжатые форматы (хакатон, спринт) позволяют пройти материал
+      раньше, чем включится сопротивление / прокрастинация.
+    applies_to: [flows, transmission]
+    examples_from_corpus: []
+    when_useful: "когда длинный курс убивает мотивацию"
+
+  - id: "22-blessing-in-disguise"
+    name_ru: "Обратить вред в пользу"
+    classic: "Использовать вредный фактор как полезный"
+    pedagogical: |
+      Слоп LLM использовать как **материал** для упражнения «найди мину»
+      (см. quality-gate агент). Ошибки студентов — как материал для
+      коллективной диагностики. AI-галлюцинации — как кейс по
+      верификации.
+    applies_to: [function, transmission]
+    examples_from_corpus: ["anthology-bb-conversation", "ucl-assessment-experiments"]
+    when_useful: "когда AI-инструмент вызывает тревогу — превратить в учебный объект"
+
+  - id: "23-feedback"
+    name_ru: "Обратная связь"
+    classic: "Ввести обратную связь"
+    pedagogical: |
+      Не «оценка в конце», а постоянная сигнализация: трекинг прогресса
+      студента, дашборд преподавателю, само-диагностика. AI-роль может
+      генерировать обратную связь чаще, чем человек физически может.
+    applies_to: [verification, controls, flows]
+    examples_from_corpus: ["ut-sage", "instructure-igniteai-agent"]
+    when_useful: "когда студент узнаёт о провале слишком поздно"
+
+  - id: "24-intermediary"
+    name_ru: "Посредник"
+    classic: "Промежуточный объект для передачи действия"
+    pedagogical: |
+      Между преподавателем и студентом — медиатор (как в модели ТюмГУ).
+      Между студентом и материалом — AI-тьютор. Между студентами —
+      платформа peer review. Посредник снимает прямой контакт там, где
+      он избыточен или невозможен.
+    applies_to: [working_organ, transmission]
+    examples_from_corpus: ["tyumgu-sas-ai-program", "coursera-coach"]
+    when_useful: "когда прямой контакт перегружает участников"
+
+  - id: "25-self-service"
+    name_ru: "Самообслуживание"
+    classic: "Объект сам себя обслуживает"
+    pedagogical: |
+      Студенты сами создают учебные материалы для следующего поколения
+      (старшие учат младших). Сообщество выпускников поддерживает
+      программу финансово и репутационно. Self-grading с auto-rubric.
+    applies_to: [working_organ, controls]
+    examples_from_corpus: []
+    when_useful: "когда программа не самовоспроизводится"
+
+  - id: "26-copying"
+    name_ru: "Копирование"
+    classic: "Использовать копию вместо оригинала"
+    pedagogical: |
+      Виртуальные пациенты вместо реальных, симуляции вместо реального
+      оборудования, AI-роли вместо реальных экспертов на ранней стадии.
+      Копия дешевле и безопаснее.
+    applies_to: [transmission]
+    examples_from_corpus: ["aitee", "xr-authoring-mas"]
+    when_useful: "когда оригинал слишком дорог / опасен / труднодоступен"
+
+  - id: "27-cheap-disposable"
+    name_ru: "Дёшево-короткоживущее вместо дорогого-долговечного"
+    classic: ""
+    pedagogical: |
+      Микро-форматы (3-минутное видео, мини-квиз, флеш-карточка) вместо
+      «большой пары». Дёшево произвести, легко обновить, можно потерять
+      без катастрофы.
+    applies_to: [transmission]
+    examples_from_corpus: ["duolingo-max"]
+    when_useful: "когда обновление материала отстаёт от изменения предметной области"
+
+  - id: "28-replacement-of-mechanical"
+    name_ru: "Замена механической схемы"
+    classic: "Заменить механическую систему оптической/тепловой/электромагнитной"
+    pedagogical: |
+      Заменить однонаправленную передачу (лекция) интерактивной (диалог
+      с AI), заменить текстовую коммуникацию голосовой, заменить
+      письменную работу видеоформатом.
+    applies_to: [transmission]
+    examples_from_corpus: ["duolingo-max", "anthology-bb-conversation"]
+    when_useful: "когда формат не работает для аудитории"
+
+  - id: "29-pneumatic-hydraulic"
+    name_ru: "Использование пневмо- и гидроконструкций"
+    classic: "Газы и жидкости вместо твёрдых частей"
+    pedagogical: |
+      Гибкие, перетекающие форматы вместо жёсткой структуры. Открытый
+      финал проекта вместо фиксированного результата.
+    applies_to: [transmission, function]
+    examples_from_corpus: []
+    when_useful: "когда жёсткая структура душит исследование"
+
+  - id: "30-flexible-films"
+    name_ru: "Гибкие оболочки и тонкие плёнки"
+    classic: ""
+    pedagogical: |
+      Тонкая оболочка курса (light-touch supervision) поверх плотной
+      студенческой работы. Преподаватель — рамка, не контейнер.
+    applies_to: [working_organ, controls]
+    examples_from_corpus: ["minerva-university"]
+    when_useful: "когда студенты способны на больше, чем формат позволяет"
+
+  - id: "31-porous-materials"
+    name_ru: "Пористые материалы"
+    classic: ""
+    pedagogical: |
+      «Пористый» курс с встроенными паузами для размышления, точками
+      выхода (студент может остановиться и вернуться), модулями-якорями
+      (всегда можно перепройти).
+    applies_to: [flows, transmission]
+    examples_from_corpus: []
+    when_useful: "когда курс «душит» студентов плотностью"
+
+  - id: "32-changing-color"
+    name_ru: "Изменение окраски"
+    classic: "Изменить цвет/прозрачность"
+    pedagogical: |
+      Прозрачность процесса: студент видит, как формируется его оценка,
+      как принимаются решения, какие данные о нём собирает AI. Open
+      criteria, open rubric.
+    applies_to: [controls, verification]
+    examples_from_corpus: ["anthology-bb-design-assistant"]
+    when_useful: "когда непрозрачность вызывает недоверие"
+
+  - id: "33-homogeneity"
+    name_ru: "Однородность"
+    classic: "Взаимодействующие объекты из одного материала"
+    pedagogical: |
+      Студент и преподаватель в одной роли (мы оба исследуем неизвестное),
+      студент и AI в одной роли (мы оба генерируем, потом критикуем).
+      Разрушение иерархии через общую позицию.
+    applies_to: [working_organ]
+    examples_from_corpus: ["tyumgu-sas-ai-program"]
+    when_useful: "когда иерархия блокирует совместное мышление"
+
+  - id: "34-rejecting-restoring"
+    name_ru: "Отброс и регенерация"
+    classic: "Использованная часть удаляется"
+    pedagogical: |
+      Промежуточные артефакты выбрасываются (черновики, пробные версии,
+      ранние гипотезы) — без сохранения. Только финальный артефакт идёт
+      в оценку. Освобождает от страха «всё фиксируется».
+    applies_to: [verification, flows]
+    examples_from_corpus: []
+    when_useful: "когда страх записи парализует эксперимент"
+
+  - id: "35-parameter-change"
+    name_ru: "Изменение физико-химических параметров"
+    classic: "Параметры состояния (агрегатное, плотность и т.д.)"
+    pedagogical: |
+      Сменить регистр: лекция в формате игры, экзамен в формате диалога,
+      контрольная как публичная защита. Сменить агрегатное состояние
+      процесса.
+    applies_to: [transmission, verification]
+    examples_from_corpus: ["minerva-university"]
+    when_useful: "когда формат «остыл»"
+
+  - id: "36-phase-transitions"
+    name_ru: "Применение фазовых переходов"
+    classic: ""
+    pedagogical: |
+      Использовать переход «не понимаю → понимаю» как педагогический
+      момент (через провокацию, парадокс, головоломку). Кризис как
+      инструмент развития.
+    applies_to: [function, transmission]
+    examples_from_corpus: ["tyumgu-bio-behavior"]
+    when_useful: "когда обучение «плоское» без качественных скачков"
+
+  - id: "37-thermal-expansion"
+    name_ru: "Применение теплового расширения"
+    classic: ""
+    pedagogical: |
+      Прогрев темы (warm-up) перед началом, остывание (cooling-down)
+      после. Эмоциональная температура сцены — управляемый параметр.
+    applies_to: [transmission]
+    examples_from_corpus: []
+    when_useful: "когда студенты «холодные» в начале и «выгоревшие» в конце"
+
+  - id: "38-accelerated-oxidation"
+    name_ru: "Использование сильных окислителей"
+    classic: ""
+    pedagogical: |
+      Жёсткая внешняя экспертиза (рынок, реальный заказчик, конкурс),
+      ускоряющая разрыв иллюзий. Включить «окислитель», чтобы убрать
+      пустоту быстро.
+    applies_to: [verification, controls]
+    examples_from_corpus: []
+    when_useful: "когда внутренняя оценка слишком мягкая"
+
+  - id: "39-inert-atmosphere"
+    name_ru: "Применение инертной среды"
+    classic: ""
+    pedagogical: |
+      Безопасная среда для экспериментов (sandbox, симулятор, защищённый
+      контур AI без публикации) — там, где ошибки не должны иметь
+      внешних последствий.
+    applies_to: [transmission, controls]
+    examples_from_corpus: ["harvard-ai-sandbox", "vanderbilt-amplify"]
+    when_useful: "когда страх ошибки блокирует обучение"
+
+  - id: "40-composite-materials"
+    name_ru: "Применение композиционных материалов"
+    classic: "Однородные материалы → композиты"
+    pedagogical: |
+      Композитная команда работающего органа: преподаватель + AI-роль +
+      медиатор + сторонний эксперт + peer-фасилитатор. Каждый компонент
+      добавляет свойство, которого нет у других.
+    applies_to: [working_organ]
+    examples_from_corpus: ["tyumgu-sas-ai-program", "nyu-langone-genai-studio"]
+    when_useful: "когда монолитная команда не справляется с разнородной задачей"

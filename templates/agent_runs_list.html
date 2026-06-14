@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Runs · {{ project.name }} — Paideia{% endblock %}
+{% block content %}
+
+{% include "_project_stepper.html" %}
+<div class="mb-4 flex items-center gap-3">
+  <h1 class="text-xl font-bold">Agent runs</h1>
+</div>
+
+<!-- Launch new run -->
+<div class="bg-white border border-stone-200 rounded p-4 mb-6">
+  <h2 class="font-bold mb-3">Запустить новый Run</h2>
+  <form method="post" action="/api/project/{{ project.id }}/agent-run/start" class="flex gap-3 items-end flex-wrap">
+    <div>
+      <label class="block text-xs uppercase text-stone-500 mb-1">profile</label>
+      <select name="profile" class="px-2 py-1 border border-stone-300 rounded text-sm">
+        <option value="default">default (по space)</option>
+        <option value="kosmos">🌌 KOSMOS · 6 альтернатив</option>
+        <option value="stakeholder_pressure">🎭 Stakeholder Pressure</option>
+        <option value="semester_sim">📅 Semester Simulator</option>
+        <option value="anti_washing">🔬 Anti-Agent-Washing</option>
+        <option value="export_rpd">📄 Export РПД</option>
+        <option value="time_machine">🕰 Time Machine — проект через 5 лет</option>
+        <option value="genealogy">🌳 Genealogy — родители и дети</option>
+        <option value="counter_corpus">💀 Counter-corpus — обстрел провалами</option>
+        <option value="hypothesis_forge">🔨 Hypothesis Forge — новая гипотеза</option>
+      </select>
+    </div>
+    <div>
+      <label class="block text-xs uppercase text-stone-500 mb-1">space</label>
+      <select name="space_id" class="px-2 py-1 border border-stone-300 rounded text-sm">
+        <option value="">— default —</option>
+        {% for s in spaces %}
+          <option value="{{ s.id }}">{{ s.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="flex-1">
+      <label class="block text-xs uppercase text-stone-500 mb-1">goal (опц.)</label>
+      <input name="goal" class="w-full px-2 py-1 border border-stone-300 rounded text-sm" placeholder="что хочешь достичь">
+    </div>
+    <button class="bg-stone-900 text-stone-100 px-4 py-2 rounded text-sm">▶ запустить</button>
+  </form>
+</div>
+
+<!-- History -->
+<h2 class="font-bold mb-3">История ({{ runs | length }})</h2>
+{% if runs %}
+  <ul class="space-y-2">
+    {% for r in runs %}
+      <li class="bg-white border border-stone-200 rounded p-3 flex items-center gap-3 text-sm">
+        <a href="/project/{{ project.id }}/run/{{ r.id }}" class="font-mono text-xs text-stone-500 hover:underline w-32 truncate">{{ r.id }}</a>
+        <span class="pill bg-violet-100 text-violet-700">{{ r.profile }}</span>
+        {% set badge = {'pending':'bg-stone-100 text-stone-600','running':'bg-amber-100 text-amber-700','awaiting_approval':'bg-violet-100 text-violet-700','applied':'bg-emerald-100 text-emerald-700','cancelled':'bg-stone-100 text-stone-500','failed':'bg-rose-100 text-rose-700'}.get(r.status,'bg-stone-100') %}
+        <span class="pill {{ badge }}">{{ r.status }}</span>
+        {% if r.space_id %}<span class="text-xs text-stone-500">{{ r.space_id }}</span>{% endif %}
+        {% if r.goal %}<span class="text-stone-600 truncate flex-1">{{ r.goal }}</span>{% else %}<span class="flex-1"></span>{% endif %}
+        <span class="text-xs text-stone-400">{{ r.created_at }}</span>
+      </li>
+    {% endfor %}
+  </ul>
+{% else %}
+  <div class="bg-violet-50 border border-violet-200 rounded-lg p-6 text-center">
+    <div class="text-3xl mb-2">▶</div>
+    <p class="text-stone-700 mb-3">Ни одного Run ещё не запущено.</p>
+    <p class="text-sm text-stone-600 max-w-lg mx-auto">
+      Самый быстрый — <code class="bg-white px-1 rounded">default</code> (30 сек, 4 базовых агента сделают предварительный аудит).
+      Самый зрелищный — <code class="bg-white px-1 rounded">KOSMOS</code> (90 сек, 6 альтернатив программы через 6 ТРИЗ-стратегий).
+    </p>
+    <p class="text-xs text-stone-500 mt-3">Выбери profile в форме выше или нажми «▶ Запустить агента» в шапке</p>
+  </div>
+{% endif %}
+
+{% endblock %}
