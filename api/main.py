@@ -3227,6 +3227,64 @@ def service_corpus_candidates(request: Request, status: str = "pending",
     )
 
 
+# --- γ · Reflexive corpus ---
+
+
+@app.get("/service/reflexive", response_class=HTMLResponse)
+def service_reflexive(request: Request, status: str = "pending") -> Any:
+    from . import reflexive
+    return templates.TemplateResponse(
+        request, "reflexive.html",
+        {"patterns": reflexive.list_patterns(status=status),
+         "stats": reflexive.stats(),
+         "filter_status": status},
+    )
+
+
+@app.post("/api/reflexive/scan")
+def api_reflexive_scan(request: Request) -> Any:
+    """Запустить полный прогон. Только owner."""
+    from . import auth_codes as ac, reflexive
+    sid = request.cookies.get(session_mod.COOKIE_NAME)
+    identity = ac.get_identity(sid)
+    if not identity.get("is_owner"):
+        raise HTTPException(403, "Только owner может запускать reflexive-сканирование (дорогой LLM-прогон).")
+    rl = session_mod.check_rate_limit(sid, None, "deep")
+    if not rl["allowed"]:
+        raise HTTPException(429, "Лимит deep исчерпан")
+    try:
+        result = reflexive.run_scan()
+    except Exception as exc:
+        raise HTTPException(500, f"scan failed: {exc}")
+    return JSONResponse(result)
+
+
+@app.post("/api/reflexive/{pattern_id}/promote")
+def api_reflexive_promote(pattern_id: str, request: Request) -> Any:
+    from . import auth_codes as ac, reflexive
+    sid = request.cookies.get(session_mod.COOKIE_NAME)
+    identity = ac.get_identity(sid)
+    if not identity.get("is_owner"):
+        raise HTTPException(403, "Только owner может продвигать паттерн в корпус")
+    try:
+        result = reflexive.promote_to_candidate(
+            pattern_id, decided_by=identity.get("nickname"))
+    except Exception as exc:
+        raise HTTPException(500, f"promote failed: {exc}")
+    return RedirectResponse(url="/service/reflexive", status_code=303)
+
+
+@app.post("/api/reflexive/{pattern_id}/dismiss")
+def api_reflexive_dismiss(pattern_id: str, request: Request) -> Any:
+    from . import auth_codes as ac, reflexive
+    sid = request.cookies.get(session_mod.COOKIE_NAME)
+    identity = ac.get_identity(sid)
+    if not identity.get("is_owner"):
+        raise HTTPException(403)
+    reflexive.dismiss(pattern_id, decided_by=identity.get("nickname"))
+    return RedirectResponse(url="/service/reflexive", status_code=303)
+
+
 @app.post("/api/corpus-candidates/{cid}/decide")
 def api_candidate_decide(cid: str, request: Request,
                           decision: str = Form(...)) -> Any:

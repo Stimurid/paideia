@@ -710,6 +710,37 @@ CREATE TABLE IF NOT EXISTS user_keys (
 );
 CREATE INDEX IF NOT EXISTS idx_user_keys_shared ON user_keys(shared);
 
+-- γ · Reflexive: паттерны которые Paideia сама заметила в своих проектах.
+-- Кластеризация проектов → анализ кластера → паттерн → опц. кандидат в корпус.
+CREATE TABLE IF NOT EXISTS reflexive_patterns (
+    id              TEXT PRIMARY KEY,
+    scan_id         TEXT NOT NULL,                     -- группа паттернов одного прогона
+    cluster_signature TEXT,                            -- хэш кластера (для дедупа)
+    cluster_size    INTEGER NOT NULL,
+    project_ids_json TEXT NOT NULL,
+    common_facets_json TEXT,                           -- {pattern, agentivity, ...}
+    pattern_kind    TEXT NOT NULL,                     -- recurring_failure / recurring_success / emerging_theme / blind_spot / hidden_contradiction
+    title           TEXT NOT NULL,
+    description     TEXT,
+    evidence_json   TEXT,                              -- цитаты из канвасов
+    proposed_corpus_action TEXT,                       -- "new_hypothesis" / "new_counter_signal" / "new_type" / "new_scenario"
+    proposed_artifact_json TEXT,                       -- драфт предложения
+    confidence      INTEGER DEFAULT 3,                 -- 1-5
+    status          TEXT NOT NULL DEFAULT 'pending',   -- pending / promoted / rejected / dismissed
+    candidate_id    TEXT,                              -- FK на corpus_candidates если promoted
+    created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+    decided_at      TEXT,
+    decided_by      TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_reflexive_scan ON reflexive_patterns(scan_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_reflexive_status ON reflexive_patterns(status, created_at DESC);
+
+-- Embedding'и проектов (для кластеризации).
+CREATE VIRTUAL TABLE IF NOT EXISTS projects_vec USING vec0(
+    project_id TEXT PRIMARY KEY,
+    embedding FLOAT[1536]
+);
+
 -- Корпус-кандидаты из курсов: предложения от litops/student/reflection стать
 -- частью корпуса/теории.
 CREATE TABLE IF NOT EXISTS corpus_candidates (
