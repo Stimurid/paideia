@@ -66,15 +66,15 @@
 
       <!-- F10: model selector -->
       <select id="model-role" onchange="updateModelHint()"
-              class="text-xs border border-stone-300 rounded px-2 py-1 bg-white"
+              class="text-xs border border-stone-300 rounded px-2 py-1 bg-white max-w-full truncate"
               title="Выбор модели — fast быстро и дёшево, deep подробно и дороже, search с веб-поиском">
-        <option value="fast">🚀 fast · gpt-4.1-mini · ~3-5 с · ≈$0.002</option>
-        <option value="deep">🧠 deep · gpt-5 · ~30-60 с · ≈$0.05</option>
-        <option value="search">🌐 search · sonar-pro · ~10-20 с · ≈$0.02</option>
+        <option value="fast">🚀 fast · ≈$0.002</option>
+        <option value="deep">🧠 deep · ≈$0.05</option>
+        <option value="search">🌐 search · ≈$0.02</option>
       </select>
 
       <span id="ask-status" class="text-stone-500 text-sm"></span>
-      <span class="ml-auto text-xs text-stone-400" id="mode-hint">gpt-4.1-mini · ~3-5 с</span>
+      <span class="ml-auto text-xs text-stone-400 hidden md:inline" id="mode-hint">gpt-4.1-mini · ~3-5 с</span>
     </div>
 
     <!-- Suggested prompts -->

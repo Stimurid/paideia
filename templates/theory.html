@@ -9,7 +9,7 @@
   <a href="/theory/new" class="bg-stone-900 text-stone-100 px-3 py-1.5 rounded text-sm hover:bg-stone-700">+ новая сущность</a>
 </div>
 
-<div class="grid grid-cols-2 gap-6 mb-8">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
   <div>
     <h2 class="font-bold mb-3 text-sm uppercase tracking-wide text-stone-500">Архитектурные типы</h2>
     <ul class="space-y-2">
@@ -25,18 +25,18 @@
     <h2 class="font-bold mb-3 text-sm uppercase tracking-wide text-stone-500">Гипотезы</h2>
     <ul class="space-y-2">
       {% for h in theory.hypotheses %}
-        <li class="bg-white border border-stone-200 rounded p-3 flex items-center gap-3 text-sm">
-          <span class="font-mono text-xs text-stone-400 w-6">{{ h.id }}</span>
-          <a href="/hypothesis/{{ h.id }}" class="flex-1 hover:underline">{{ h.name }}</a>
+        <li class="bg-white border border-stone-200 rounded p-3 flex items-start gap-3 text-sm flex-wrap">
+          <span class="font-mono text-xs text-stone-400 w-6 shrink-0">{{ h.id }}</span>
+          <a href="/hypothesis/{{ h.id }}" class="flex-1 min-w-0 hover:underline">{{ h.name }}</a>
           {% set color = {'supported':'bg-emerald-100 text-emerald-700','partially-supported':'bg-amber-100 text-amber-700','weakened':'bg-rose-100 text-rose-700','proposed':'bg-stone-100 text-stone-700'}.get(h.status_current, 'bg-stone-100 text-stone-700') %}
-          <span class="pill {{ color }}">{{ h.status_current }}</span>
+          <span class="pill {{ color }} whitespace-nowrap shrink-0">{{ h.status_current }}</span>
         </li>
       {% endfor %}
     </ul>
   </div>
 </div>
 
-<div class="grid grid-cols-3 gap-6">
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
   <div>
     <h2 class="font-bold mb-3 text-sm uppercase tracking-wide text-stone-500">Противоречия</h2>
     <ul class="space-y-1.5">
