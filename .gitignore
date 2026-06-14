@@ -39,3 +39,4 @@ content/archive/
 
 # Frontmatter caches
 .frontmatter-cache/
+db/llm_cache/**
