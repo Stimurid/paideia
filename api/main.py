@@ -1857,6 +1857,34 @@ class AskConciergePayload(BaseModel):
     model_role: str = "fast"        # F10: fast | deep | search
 
 
+@app.post("/api/extract-file")
+async def api_extract_file(request: Request) -> Any:
+    """Сервер-сайд извлечение текста из загруженного файла.
+    Используется концьерж-формой когда юзер прикладывает PPTX/PDF/DOCX/EPUB —
+    JS-метод f.text() для них не работает (бинарные форматы)."""
+    from .extractors import extract_file
+    form = await request.form()
+    f = form.get("file")
+    if f is None or not hasattr(f, "read"):
+        raise HTTPException(400, "file required (multipart)")
+    data = await f.read()
+    if len(data) > 50 * 1024 * 1024:
+        raise HTTPException(413, "файл > 50 МБ")
+    try:
+        result = extract_file(f.filename or "upload.bin", data)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+    except Exception as exc:
+        raise HTTPException(500, f"extract failed: {exc}")
+    text = (result.get("text") or "").strip()
+    return JSONResponse({
+        "filename": f.filename,
+        "format": result.get("format"),
+        "text_length": len(text),
+        "text": text[:60000],
+    })
+
+
 @app.post("/api/ask")
 def api_ask_concierge(payload: AskConciergePayload, request: Request) -> JSONResponse:
     # F11: rate-limit
