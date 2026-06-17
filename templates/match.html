@@ -2,57 +2,115 @@
 {% block title %}Подбор аналогов — Paideia{% endblock %}
 {% block content %}
 
+<style>
+  .field-label {
+    display: flex; align-items: center; gap: 4px;
+    font-size: 11px; text-transform: uppercase;
+    color: #78716c; font-weight: 600; margin-bottom: 4px;
+  }
+  .info-i {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 14px; height: 14px; border-radius: 50%;
+    background: #e7e5e4; color: #57534e; font-size: 10px;
+    font-weight: bold; cursor: help; font-family: serif;
+  }
+  .info-i:hover { background: #a78bfa; color: white; }
+  /* Tooltip через title работает но кастомный нагляднее */
+  [data-tip] { position: relative; }
+  [data-tip]:hover::after {
+    content: attr(data-tip);
+    position: absolute; left: 0; top: 100%;
+    margin-top: 4px;
+    background: #1c1917; color: white; font-weight: normal;
+    padding: 8px 10px; border-radius: 6px;
+    font-size: 11px; line-height: 1.5;
+    width: 320px; max-width: 90vw;
+    z-index: 50; box-shadow: 0 4px 12px rgba(0,0,0,.25);
+    text-transform: none; letter-spacing: 0;
+  }
+</style>
+
 <h1 class="text-2xl font-bold mb-2">Подбор аналогов</h1>
-<p class="text-stone-500 mb-6 text-sm">Два пути: либо опиши ситуацию свободным текстом (LLM раскидает по осям), либо заполни оси руками.</p>
+<p class="text-stone-600 mb-6 text-sm">
+  Найдёт в корпусе 118 кейсов те, что ближе всего к твоей ситуации.<br>
+  Два пути: <strong>опиши ситуацию словами</strong> (LLM сама расставит оси), либо <strong>заполни оси руками</strong>. Можно комбинировать.
+</p>
 
 <!-- Свободный текст / файл -->
 <details class="bg-white border border-stone-200 rounded p-4 mb-4" {% if not query %}open{% endif %}>
-  <summary class="cursor-pointer font-semibold text-sm">📝 Описать ситуацию свободным текстом / вставить материалы</summary>
+  <summary class="cursor-pointer font-semibold text-sm">📝 Описать ситуацию свободным текстом / приложить файл</summary>
   <div class="mt-3">
-    <textarea id="free-desc" rows="8" placeholder="Например: «Магистратура по data science в региональном вузе РФ, 120 студентов. Хотим внедрить AI-тьютора по статистике, который ведёт студентов через домашки в Socratic-режиме. Бюджета на серверы нет, можем использовать только OpenAI API. Преподаватель остаётся гл. оценщиком. Регуляторных ограничений нет — стандартная программа ФГОС.»" class="w-full px-3 py-2 border border-stone-300 rounded text-sm"></textarea>
-    <div class="flex gap-2 mt-2 items-center">
+    <textarea id="free-desc" rows="8" placeholder="Например: «Магистратура по data science в региональном вузе РФ, 120 студентов. Хотим внедрить AI-тьютора по статистике, который ведёт студентов через домашки в Socratic-режиме. Бюджета на серверы нет, можем использовать только OpenAI API. Преподаватель остаётся главным оценщиком. Стандартная программа ФГОС.»" class="w-full px-3 py-2 border border-stone-300 rounded text-sm"></textarea>
+
+    <div class="flex gap-2 mt-2 items-center flex-wrap">
       <button onclick="parseFreeText()" class="bg-stone-900 text-stone-100 px-4 py-2 rounded text-sm hover:bg-stone-700">→ разобрать через LLM</button>
-      <input type="file" id="upload-file" accept=".md,.txt,.pdf,.docx,.pptx" class="text-xs">
+      <input type="file" id="upload-file" accept=".md,.txt,.pdf,.docx,.pptx,.epub" class="text-xs">
       <span id="parse-status" class="text-stone-500 text-xs"></span>
     </div>
+    <p class="text-xs text-stone-500 mt-2">
+      Принимаем PDF, DOCX, PPTX, EPUB, TXT, MD до 50 МБ. Текст из файла добавится к описанию, потом LLM раскидает по осям.
+    </p>
     <div id="parse-result" class="hidden mt-3 bg-stone-50 border border-stone-200 rounded p-3 text-xs"></div>
   </div>
 </details>
 
-<form method="get" action="/match" id="match-form" class="bg-white border border-stone-200 rounded p-4 grid grid-cols-3 gap-4 mb-6">
+<form method="get" action="/match" id="match-form" class="bg-white border border-stone-200 rounded p-4 grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+
   <div>
-    <label class="block text-xs uppercase tracking-wide text-stone-500 mb-1">agentivity (0–6)</label>
+    <div class="field-label">
+      Агентность ИИ (0–6)
+      <span class="info-i" data-tip="Уровень автономии ИИ. 0 = чат отвечает на запрос. 2 = ассистент с инструментами. 4 = многоагентная система. 6 = полностью автономный агент работает в среде сам. Шкала Stanford.">i</span>
+    </div>
     <input name="agentivity" type="number" min="0" max="6" value="{{ query.agentivity or '' }}" class="w-full px-2 py-1 border border-stone-300 rounded text-sm">
   </div>
+
   <div>
-    <label class="block text-xs uppercase tracking-wide text-stone-500 mb-1">паттерн A–F</label>
+    <div class="field-label">
+      Архитектурный тип
+      <span class="info-i" data-tip="6 типов из корпуса. A = Governed AI access (защищённый доступ к моделям). B = No-code builder / LMS-native agents (конструктор). C = Pedagogy-shaped dialogue (диалог под педагогику). D = Governance + training ecosystems. E = Domain-secure workforce studio. F = National AI infrastructure.">i</span>
+    </div>
     <select name="ai_pattern" class="w-full px-2 py-1 border border-stone-300 rounded text-sm">
       <option value="">—</option>
+      {% set type_titles = {'A':'A · Governed AI access','B':'B · No-code builder','C':'C · Pedagogy-shaped dialogue','D':'D · Governance ecosystem','E':'E · Domain-secure studio','F':'F · National infrastructure'} %}
       {% for p in ['A','B','C','D','E','F'] %}
-      <option value="{{ p }}" {% if query.ai_pattern == p %}selected{% endif %}>{{ p }}</option>
+      <option value="{{ p }}" {% if query.ai_pattern == p %}selected{% endif %}>{{ type_titles[p] }}</option>
       {% endfor %}
     </select>
   </div>
+
   <div>
-    <label class="block text-xs uppercase tracking-wide text-stone-500 mb-1">orchestration</label>
+    <div class="field-label">
+      Оркестрация
+      <span class="info-i" data-tip="Как организован контур ИИ-агентов. LIN = линейный (один за другим). MOD = модульный (отдельные компоненты). NET = сетевой (граф связей). META = мета-уровень (агент управляющий агентами). SWARM = рой однотипных агентов.">i</span>
+    </div>
     <select name="orchestration" class="w-full px-2 py-1 border border-stone-300 rounded text-sm">
       <option value="">—</option>
+      {% set orch_titles = {'LIN':'LIN · линейный','MOD':'MOD · модульный','NET':'NET · сетевой','META':'META · мета-уровень','SWARM':'SWARM · рой'} %}
       {% for p in ['LIN','MOD','NET','META','SWARM'] %}
-      <option value="{{ p }}" {% if query.orchestration == p %}selected{% endif %}>{{ p }}</option>
+      <option value="{{ p }}" {% if query.orchestration == p %}selected{% endif %}>{{ orch_titles[p] }}</option>
       {% endfor %}
     </select>
   </div>
+
   <div>
-    <label class="block text-xs uppercase tracking-wide text-stone-500 mb-1">pedagogy</label>
+    <div class="field-label">
+      Педагогический сдвиг
+      <span class="info-i" data-tip="Как ИИ меняет роль преподавателя и студента. AMP = усиление (ИИ помогает тому что и так делал препод). ROLE = новые роли (картограф / медиатор / хранитель мотивации). AUTO = автоматизация рутинных операций. INST = ИИ как инструмент в руках студента. SUBJ = ИИ становится субъектом педагогической ситуации.">i</span>
+    </div>
     <select name="pedagogy_transformation" class="w-full px-2 py-1 border border-stone-300 rounded text-sm">
       <option value="">—</option>
+      {% set ped_titles = {'AMP':'AMP · усиление','ROLE':'ROLE · новые роли','AUTO':'AUTO · автоматизация','INST':'INST · инструмент студента','SUBJ':'SUBJ · ИИ как субъект'} %}
       {% for p in ['AMP','ROLE','AUTO','INST','SUBJ'] %}
-      <option value="{{ p }}" {% if query.pedagogy_transformation == p %}selected{% endif %}>{{ p }}</option>
+      <option value="{{ p }}" {% if query.pedagogy_transformation == p %}selected{% endif %}>{{ ped_titles[p] }}</option>
       {% endfor %}
     </select>
   </div>
+
   <div>
-    <label class="block text-xs uppercase tracking-wide text-stone-500 mb-1">transformation mode</label>
+    <div class="field-label">
+      Режим трансформации
+      <span class="info-i" data-tip="Откуда идёт инициатива и как масштабируется внедрение в институции. rectoral-initiative = от ректора сверху-вниз. faculty-driven = от факультета. bottom-up = от преподавателей и студентов. vendor-pushed = поставщик продаёт. ministry-mandated = регулятор обязал. Влияет на скорость и устойчивость.">i</span>
+    </div>
     <select name="transformation_mode" class="w-full px-2 py-1 border border-stone-300 rounded text-sm">
       <option value="">—</option>
       {% for m in transformation_modes %}
@@ -60,30 +118,57 @@
       {% endfor %}
     </select>
   </div>
+
   <div>
-    <label class="block text-xs uppercase tracking-wide text-stone-500 mb-1">interaction form</label>
+    <div class="field-label">
+      Форма взаимодействия
+      <span class="info-i" data-tip="Внешняя форма того как студент работает с ИИ. chat = простой чат-диалог. agent-workflow = поток через несколько шагов. persona-roleplay = ролевая игра с персонажами. multi-agent-simulation = симуляция реальности множеством агентов. governed-portal = защищённый университетский портал. lms-microrole = микро-роль в LMS. knowledge-graph-tutor = тьютор на графе знаний.">i</span>
+    </div>
     <select name="interaction_form" class="w-full px-2 py-1 border border-stone-300 rounded text-sm">
       <option value="">—</option>
+      {% set form_titles = {
+        'chat':'chat · чат-диалог',
+        'agent-workflow':'agent-workflow · поток через агентов',
+        'persona-roleplay':'persona-roleplay · ролевая игра',
+        'multi-agent-simulation':'multi-agent-simulation · симуляция',
+        'governed-portal':'governed-portal · защищённый портал',
+        'lms-microrole':'lms-microrole · микро-роль в LMS',
+        'knowledge-graph-tutor':'knowledge-graph-tutor · тьютор на графе'
+      } %}
       {% for f in ['chat','agent-workflow','persona-roleplay','multi-agent-simulation','governed-portal','lms-microrole','knowledge-graph-tutor'] %}
-      <option value="{{ f }}" {% if query.interaction_form == f %}selected{% endif %}>{{ f }}</option>
+      <option value="{{ f }}" {% if query.interaction_form == f %}selected{% endif %}>{{ form_titles[f] }}</option>
       {% endfor %}
     </select>
   </div>
+
   <div>
-    <label class="block text-xs uppercase tracking-wide text-stone-500 mb-1">scale of change (1–5)</label>
+    <div class="field-label">
+      Масштаб изменения (1–5)
+      <span class="info-i" data-tip="Насколько большая часть программы / университета меняется. 1 = одна тема в одном курсе (микро-эксперимент). 3 = целый курс или модуль перепроектирован. 5 = весь учебный план / уровень обучения / институция меняется.">i</span>
+    </div>
     <input name="scale_of_change" type="number" min="1" max="5" value="{{ query.scale_of_change or '' }}" class="w-full px-2 py-1 border border-stone-300 rounded text-sm">
   </div>
+
   <div>
-    <label class="block text-xs uppercase tracking-wide text-stone-500 mb-1">radicalness (1–5)</label>
+    <div class="field-label">
+      Радикальность (1–5)
+      <span class="info-i" data-tip="Насколько ход меняет норму обучения. 1 = новый инструмент в существующей рамке (например, чат-помощник в обычном курсе). 3 = существенная реорганизация (новая роль студента, изменение оценки). 5 = пересборка онтологии обучения (другая модель знания / субъекта / университета).">i</span>
+    </div>
     <input name="radicalness" type="number" min="1" max="5" value="{{ query.radicalness or '' }}" class="w-full px-2 py-1 border border-stone-300 rounded text-sm">
   </div>
+
   <div>
-    <label class="block text-xs uppercase tracking-wide text-stone-500 mb-1">domain specificity (1–5)</label>
+    <div class="field-label">
+      Доменная специфика (1–5)
+      <span class="info-i" data-tip="Насколько решение зависит от конкретной предметной области. 1 = универсально, переносится в любую дисциплину. 3 = требует адаптации под предмет (например, отдельные настройки для математики vs истории). 5 = работает только в одной области (медицина / право / инженерия) — выпрыгнуть оттуда нельзя без полной переделки.">i</span>
+    </div>
     <input name="domain_specificity" type="number" min="1" max="5" value="{{ query.domain_specificity or '' }}" class="w-full px-2 py-1 border border-stone-300 rounded text-sm">
   </div>
-  <div class="col-span-3">
-    <button class="bg-stone-900 text-stone-100 px-4 py-2 rounded text-sm hover:bg-stone-700">подобрать</button>
-    <a href="/match" class="ml-3 text-stone-500 text-sm hover:underline">сбросить</a>
+
+  <div class="md:col-span-3 flex items-center gap-3">
+    <button class="bg-stone-900 text-stone-100 px-5 py-2 rounded text-sm hover:bg-stone-700 font-semibold">подобрать</button>
+    <a href="/match" class="text-stone-500 text-sm hover:underline">сбросить</a>
+    <span class="text-xs text-stone-400 ml-auto">Чем больше осей заполнено, тем точнее аналоги. Можно частично — алгоритм работает на любом подмножестве.</span>
   </div>
 </form>
 
@@ -96,7 +181,7 @@
         {% if r.pattern %}<span class="pill pill-{{ r.pattern }}">{{ r.pattern }}</span>{% endif %}
         <div class="text-xs text-stone-500 mt-1">a{{ r.agentivity if r.agentivity is not none else '?' }}</div>
       </div>
-      <div class="flex-1">
+      <div class="flex-1 min-w-0">
         <a href="/case/{{ r.id }}" class="font-semibold hover:underline">{{ r.name }}</a>
         <div class="text-xs text-stone-500">{{ r.org_name }} · {{ r.country }}</div>
         <div class="text-xs text-stone-400 mt-1">совпало осей: {{ r.matched_axes_count }} — {{ r.matched_axes|join(', ') }}</div>
@@ -109,7 +194,7 @@
   {% endfor %}
 </ul>
 {% elif query %}
-<p class="text-stone-500">нет похожих кейсов</p>
+<p class="text-stone-500">Нет похожих кейсов по этим осям. Попробуй заполнить меньше осей — алгоритм может найти аналог по 2-3 ключевым параметрам.</p>
 {% endif %}
 
 <script>
@@ -118,10 +203,27 @@ async function parseFreeText() {
   const file = document.getElementById('upload-file').files[0];
   const status = document.getElementById('parse-status');
   if (file) {
-    if (file.size > 2_000_000) { status.textContent = 'файл > 2MB, пока не поддерживается'; return; }
-    status.textContent = 'читаю файл…';
-    const fileText = await file.text().catch(() => '');
-    if (fileText) text = (text ? text + '\n\n--- содержимое файла ---\n' : '') + fileText;
+    const ext = (file.name.split('.').pop() || '').toLowerCase();
+    const binary = ['pdf','docx','pptx','epub'];
+    let fileText = '';
+    if (binary.includes(ext)) {
+      status.textContent = '⏳ извлекаю текст из ' + ext.toUpperCase() + '...';
+      try {
+        const fd = new FormData();
+        fd.append('file', file);
+        const r = await fetch('/api/extract-file', {method:'POST', body: fd});
+        if (!r.ok) { status.innerHTML = '<span class="text-rose-700">⚠ ' + (await r.text()).slice(0,200) + '</span>'; return; }
+        const d = await r.json();
+        fileText = d.text || '';
+        status.textContent = '✓ извлечено ' + d.text_length + ' символов';
+      } catch (e) {
+        status.innerHTML = '<span class="text-rose-700">⚠ ' + e.message + '</span>'; return;
+      }
+    } else {
+      fileText = await file.text().catch(() => '');
+      if (fileText) status.textContent = '✓ файл прочитан';
+    }
+    if (fileText) text = (text ? text + '\n\n--- содержимое файла ---\n' : '') + fileText.slice(0, 100000);
   }
   if (!text) { status.textContent = 'пусто'; return; }
   status.textContent = '🔍 gpt-4.1-mini раскидывает по осям…';
@@ -134,7 +236,7 @@ async function parseFreeText() {
     const data = await r.json();
     const box = document.getElementById('parse-result');
     if (data.not_in_scope) {
-      box.innerHTML = '<span class="text-rose-700">не образовательный кейс</span>';
+      box.innerHTML = '<span class="text-rose-700">Похоже это не образовательный кейс — переформулируй про обучение/курс/университет.</span>';
       box.classList.remove('hidden');
       status.textContent = '';
       return;
@@ -142,7 +244,6 @@ async function parseFreeText() {
     const axes = data.axes || {};
     const known = Object.keys(axes).length;
     status.textContent = `✓ распознано осей: ${known} (за ${(data.duration_ms/1000).toFixed(1)} с)`;
-    // подставляем в форму
     const form = document.getElementById('match-form');
     Object.entries(axes).forEach(([k,v]) => {
       const inp = form.querySelector(`[name="${k}"]`);
@@ -156,7 +257,7 @@ async function parseFreeText() {
       <div class="text-stone-600">распознано: <code class="bg-white px-1">${JSON.stringify(axes)}</code></div>
       ${low ? `<div class="text-amber-700 mt-1">с низкой уверенностью: ${low}</div>` : ''}
       ${unk ? `<div class="text-stone-500 mt-1">не определены: ${unk}</div>` : ''}
-      <div class="mt-2 text-stone-500">оси подставлены в форму ниже — жми «подобрать»</div>
+      <div class="mt-2 text-stone-500">Оси подставлены в форму ниже — жми «подобрать», или подкорректируй и жми.</div>
     `;
   } catch (e) {
     status.textContent = 'ошибка: ' + e.message;
