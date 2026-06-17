@@ -15,7 +15,7 @@
 
 <div id="mode-bulk" class="hidden mb-6">
   <div class="bg-white border border-stone-200 rounded p-4">
-    <p class="text-stone-500 text-sm mb-4">Загрузи отчёт (PDF/DOCX/PPTX/MD/TXT) или вставь длинный текст. Документ режется на сегменты по эвристическим заголовкам или фиксированным чанкам; каждый сегмент прогоняется через gpt-4.1-mini на извлечение кейсов. Лимит: 30 сегментов за прогон.</p>
+    <p class="text-stone-500 text-sm mb-4">Загрузи отчёт (<strong>PDF · DOCX · PPTX · MD · TXT</strong>) или вставь длинный текст. Документ режется на сегменты по эвристическим заголовкам или фиксированным чанкам ~3500 символов; каждый сегмент прогоняется через gpt-4.1-mini на извлечение кейсов. <strong>Лимит: 30 сегментов за прогон</strong> (большой PDF делится по частям).<br><span class="text-amber-700">EPUB здесь пока не поддерживается — для него <a href="/library/upload" class="text-violet-700 hover:underline">/library/upload</a>.</span></p>
 
     <label class="block text-xs uppercase tracking-wide text-stone-500 mb-1">файл</label>
     <input id="bulk-file" type="file" accept=".pdf,.docx,.pptx,.md,.txt" class="mb-3 text-sm">

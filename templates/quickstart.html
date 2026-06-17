@@ -82,6 +82,55 @@
     {% endfor %}
   </div>
 
+  <div class="mt-8 bg-white border-2 border-violet-300 rounded-lg p-5 text-sm">
+    <strong class="text-base">📎 Куда грузить какие файлы</strong>
+    <p class="text-stone-600 text-xs mt-1 mb-3">У трёх загрузок разные задачи и лимиты. Выбирай по тому, что делаешь.</p>
+    <table class="w-full text-xs border-collapse">
+      <thead class="bg-stone-100">
+        <tr>
+          <th class="text-left p-2 border border-stone-200">куда</th>
+          <th class="text-left p-2 border border-stone-200">зачем</th>
+          <th class="text-left p-2 border border-stone-200">форматы</th>
+          <th class="text-left p-2 border border-stone-200">размер</th>
+          <th class="text-left p-2 border border-stone-200">что внутри</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="p-2 border border-stone-200"><a href="/" class="text-violet-700 hover:underline font-semibold">главная «💼 У меня проект»</a></td>
+          <td class="p-2 border border-stone-200">обсудить один замысел / документ</td>
+          <td class="p-2 border border-stone-200">pdf · docx · pptx · epub · txt · md</td>
+          <td class="p-2 border border-stone-200">50 МБ файл, в LLM идёт <strong>~150k символов</strong> (fast) или <strong>~400k</strong> (deep)</td>
+          <td class="p-2 border border-stone-200">текст летит в концьерж, ответ один раз</td>
+        </tr>
+        <tr class="bg-stone-50">
+          <td class="p-2 border border-stone-200"><a href="/library/upload" class="text-violet-700 hover:underline font-semibold">/library/upload</a></td>
+          <td class="p-2 border border-stone-200">постоянное добавление в библиотеку (питает RAG)</td>
+          <td class="p-2 border border-stone-200">pdf · docx · pptx · epub · txt · md</td>
+          <td class="p-2 border border-stone-200">50 МБ, без лимита по символам (режется на чанки)</td>
+          <td class="p-2 border border-stone-200">книга → summary → концепты → embeddings, доступна всем вопросам всегда</td>
+        </tr>
+        <tr>
+          <td class="p-2 border border-stone-200"><a href="/import" class="text-violet-700 hover:underline font-semibold">/import</a></td>
+          <td class="p-2 border border-stone-200">массовая выемка кейсов из доклада/отчёта</td>
+          <td class="p-2 border border-stone-200">pdf · docx · pptx · txt · md или URL</td>
+          <td class="p-2 border border-stone-200">режется на сегменты по 3500 chars, без верхнего лимита</td>
+          <td class="p-2 border border-stone-200">LLM решает что кейс, что нет; падает в каталог корпуса</td>
+        </tr>
+        <tr class="bg-stone-50">
+          <td class="p-2 border border-stone-200"><a href="/courses" class="text-violet-700 hover:underline font-semibold">курс → событие → 🎙</a></td>
+          <td class="p-2 border border-stone-200">аудио лекции/семинара → транскрипт</td>
+          <td class="p-2 border border-stone-200">mp3 · wav · m4a · ogg</td>
+          <td class="p-2 border border-stone-200">25 МБ (лимит Whisper)</td>
+          <td class="p-2 border border-stone-200">транскрипт сразу в body события, litops автозапускается</td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="text-xs text-stone-500 mt-3">
+      <strong>Правило:</strong> разовый разговор о документе → главная. Документ как источник знания → /library. Документ с россыпью кейсов → /import. Запись лекции → курс.
+    </p>
+  </div>
+
   <div class="mt-8 bg-amber-50 border border-amber-200 rounded p-4 text-sm">
     <strong>Что под капотом:</strong>
     <ul class="list-disc ml-5 mt-2 space-y-1 text-stone-700">

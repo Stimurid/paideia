@@ -54,9 +54,14 @@
               class="w-full px-3 py-2 border border-stone-200 rounded text-sm focus:outline-none focus:border-violet-500"></textarea>
 
     <div id="project-extras" class="hidden mt-3">
-      <label class="block text-xs uppercase text-stone-500 mb-1">или загрузи файл (pdf / docx / pptx / epub / txt / md, до 50 МБ)</label>
+      <label class="block text-xs uppercase text-stone-500 mb-1">или загрузи файл (pdf / docx / pptx / epub / txt / md)</label>
       <input id="ask-file" type="file" accept=".txt,.md,.pdf,.docx,.pptx,.epub" class="text-sm">
       <div id="ask-file-status" class="text-xs text-stone-500 mt-1"></div>
+      <div class="text-xs text-stone-400 mt-1">
+        Лимит для разговора с концьержем: <strong>~150k символов</strong> на <code>fast</code>, <strong>~400k</strong> на <code>deep</code>.
+        Больше — лучше как <a href="/library/upload" class="text-violet-700 hover:underline">библиотечную книгу</a>
+        (станет частью RAG) или через <a href="/import" class="text-violet-700 hover:underline">/import</a> (массовая выемка кейсов).
+      </div>
     </div>
 
     <div class="flex gap-2 mt-3 items-center flex-wrap">
@@ -204,12 +209,14 @@ async function askConcierge() {
   if (currentMode === 'project') {
     const f = document.getElementById('ask-file').files[0];
     const status = document.getElementById('ask-file-status');
+    const modelRoleSelect = document.getElementById('model-role').value;
+    // лимиты по модели
+    const charLimit = ({fast: 150000, deep: 400000, search: 100000})[modelRoleSelect] || 150000;
     if (f) {
       const ext = (f.name.split('.').pop() || '').toLowerCase();
       const binary = ['pdf','docx','pptx','epub'];
       let ft = '';
       if (binary.includes(ext)) {
-        // Server-side extraction для бинарных форматов
         status.textContent = '⏳ извлекаю текст из ' + ext.toUpperCase() + '...';
         try {
           const fd = new FormData();
@@ -226,7 +233,21 @@ async function askConcierge() {
         ft = await f.text().catch(() => '');
         status.textContent = ft ? '✓ ' + ft.length + ' символов' : '⚠ файл пустой';
       }
-      if (ft) text = (text ? text + '\n\n--- файл ---\n' : '') + ft.slice(0, 30000);
+      if (ft) {
+        if (ft.length > charLimit) {
+          const human = ft.length.toLocaleString('ru');
+          const lim = charLimit.toLocaleString('ru');
+          status.innerHTML = `<div class="bg-amber-50 border border-amber-300 rounded p-2 mt-1">
+            ⚠ файл слишком большой для разговора с концьержем (${human} символов, лимит ${lim} на модели <code>${modelRoleSelect}</code>).<br>
+            Лучше отправить:
+            <a href="/library/upload" class="text-violet-700 hover:underline font-semibold">→ в библиотеку</a> (станет частью RAG),
+            или <a href="/import" class="text-violet-700 hover:underline font-semibold">/import</a> (если внутри много кейсов).
+            Можно переключиться на 🧠 <code>deep</code> — там лимит 400k.
+          </div>`;
+          return;
+        }
+        text = (text ? text + '\n\n--- файл ---\n' : '') + ft;
+      }
     }
   }
   if (!text) { document.getElementById('ask-status').textContent = 'пусто'; return; }
